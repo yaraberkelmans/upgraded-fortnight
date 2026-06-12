@@ -7,7 +7,6 @@ from SIMPLE_CIVIL.civil import Citizen, CitizenState, Cop, CivilViolenceModel
 STATE_COLORS = {
     CitizenState.QUIET: "#4caf50",
     CitizenState.ACTIVE: "#d33f49",
-    CitizenState.ARRESTED: "#999999",
 }
 
 
@@ -37,7 +36,6 @@ chart_component = make_plot_component(
     {
         "Quiet": STATE_COLORS[CitizenState.QUIET],
         "Active": STATE_COLORS[CitizenState.ACTIVE],
-        "Arrested": STATE_COLORS[CitizenState.ARRESTED],
     }
 )
 
