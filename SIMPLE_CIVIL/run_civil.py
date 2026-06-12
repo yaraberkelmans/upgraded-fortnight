@@ -1,9 +1,15 @@
 import math
+import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 from IPython.display import display
 
-from SIMPLE_CIVIL.civil import CivilViolenceModel, CivilViolenceParams, CitizenState
+try:
+    from SIMPLE_CIVIL.civil import CivilViolenceModel, CivilViolenceParams, CitizenState
+except ModuleNotFoundError:
+    sys.path.append(str(Path(__file__).resolve().parent))
+    from civil import CivilViolenceModel, CivilViolenceParams, CitizenState
 
 
 def plot_grid(model, title="Civil Violence grid"):
