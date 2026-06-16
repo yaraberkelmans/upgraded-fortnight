@@ -56,7 +56,11 @@ class Fan:
         self.own_fraction = 0.0
         self.police_fraction = 0.0
         self.local_aggressive_fraction = 0.0
-        self.relationship_aggression = 0.0
+        # Group-level baseline aggression. For now every fan in the same group
+        # receives the same value, derived from the global group composition.
+        # Example: if 30% are AWAY, every AWAY fan gets 0.70 baseline aggression;
+        # if 70% are HOME, every HOME fan gets 0.30 baseline aggression.
+        self.base_aggression = self.model.group_base_aggression(self.group)
         self.arrest_probability = 0.0
         self.aggression_score = 0.0
         self.same_fraction = 0.0
@@ -118,10 +122,10 @@ class Fan:
         """Choose passive/aggressive behaviour for the current step.
 
         Rule: no rival nearby means no fan-fan game, so the fan stays passive.
-        With rivals nearby, aggression increases through personal hostility, the
-        model-level HOME-AWAY relationship, rival presence, and local riot
-        contagion. Aggression decreases through own-group buffering, police
-        presence, and perceived arrest risk.
+        With rivals nearby, aggression increases through the fan's group-level
+        baseline aggression, rival presence, local own-group confidence, and
+        local riot contagion. Aggression decreases through police presence and
+        perceived arrest risk.
         """
         neighbours = self.neighbours(self.model.params.fan_vision)
         total_neighbours = max(1, len(neighbours))
@@ -142,10 +146,7 @@ class Fan:
         self.rival_fraction = rivals / total_neighbours
         self.police_fraction = police / total_neighbours
         self.local_aggressive_fraction = aggressive_nearby / total_neighbours
-        self.relationship_aggression = self.model.relationship_aggression(
-            self.group,
-            self.rival_group,
-        )
+        self.base_aggression = self.model.group_base_aggression(self.group)
         self.arrest_probability = self.estimate_arrest_probability(police, aggressive_for_risk)
 
         if rivals == 0:
@@ -156,11 +157,11 @@ class Fan:
         p = self.model.params
         risk = self.risk_aversion * self.arrest_probability
         self.aggression_score = (
-            p.hostility_weight * self.hostility
-            + p.relationship_weight * self.relationship_aggression
+            p.base_aggression_weight * self.base_aggression
+            + p.hostility_weight * self.hostility
             + p.rival_weight * self.rival_fraction
+            + p.own_group_weight * self.own_fraction
             + p.riot_contagion_weight * self.local_aggressive_fraction
-            - p.own_group_buffer * self.own_fraction
             - p.police_deterrence * self.police_fraction
             - p.risk_weight * risk
         )
@@ -228,6 +229,69 @@ class Fan:
 
         return max(dx, dy)
 
+    def same_fraction_at_position(self, pos) -> float:
+        """Schelling score for a possible target position.
+
+        This asks: if this fan moved to `pos`, what fraction of radius-1
+        neighbours would be from the same supporter group? Empty cells can count
+        as different, matching the original Schelling lecture variant.
+        """
+        neighbours = self.model.grid.get_neighbors(
+            pos,
+            moore=True,
+            include_center=False,
+            radius=1,
+        )
+
+        same = sum(isinstance(agent, Fan) and agent.group == self.group for agent in neighbours)
+        fan_neighbours = sum(isinstance(agent, Fan) for agent in neighbours)
+
+        if self.model.params.count_empty_as_different:
+            denominator = 8
+        else:
+            denominator = fan_neighbours
+
+        if denominator == 0:
+            return 1.0
+        return same / denominator
+
+    def schelling_jump_position(self):
+        """Choose a relocation target for a spatially unhappy fan.
+
+        The target is not just the nearest empty cell. It is weighted by:
+        - exponential distance: nearby moves remain more likely;
+        - target similarity: places with more own-group neighbours are preferred;
+        - separation side bias: under separation, own side is preferred.
+        """
+        empty_positions = list(self.model.grid.empties)
+        if not empty_positions:
+            return None
+
+        p = self.model.params
+        candidates = []
+        weights = []
+
+        for pos in empty_positions:
+            distance = self.distance_to(pos)
+            if distance == 0:
+                continue
+            if p.max_jump_distance is not None and distance > p.max_jump_distance:
+                continue
+
+            target_similarity = self.same_fraction_at_position(pos)
+            weight = math.exp(-p.jump_decay * distance)
+            weight *= 1.0 + p.schelling_weight * target_similarity
+
+            if p.separation_strength > 0:
+                weight *= 1.0 + p.separation_strength * self.preferred_side_score(pos)
+
+            candidates.append(pos)
+            weights.append(weight)
+
+        if not candidates:
+            return None
+        return self.random.choices(candidates, weights=weights, k=1)[0]
+
     def exponential_jump_position(self):
         """Choose any empty cell with probability exp(-decay * distance).
 
@@ -266,9 +330,10 @@ class Fan:
     def move(self) -> None:
         p = self.model.params
 
-        # Schelling-like relocation: unhappy fans seek a nearby empty position.
+        # Schelling-like relocation: unhappy fans seek an empty position with
+        # a better own-group neighbourhood, while still usually moving nearby.
         if p.use_schelling_movement and not self.decide_happiness():
-            new_pos = self.nearest_empty_position()
+            new_pos = self.schelling_jump_position()
             if new_pos is not None:
                 self.model.grid.move_agent(self, new_pos)
                 self.model.moves_this_step += 1

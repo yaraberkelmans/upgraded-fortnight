@@ -163,16 +163,31 @@ class Cop:
             self.move_randomly_within_vision()
 
 class CivilViolenceModel(Model):
-    def __init__(self, params=CivilViolenceParams()):
+    def __init__(self, params: CivilViolenceParams | None = None, **kwargs):
+        """Initialize the model.
+
+        Accept either a `CivilViolenceParams` instance via `params`, or individual
+        parameters as keyword arguments (e.g. `N=40`, `citizen_density=0.7`). This
+        makes the model compatible with Solara's parameter UI which supplies
+        keyword args for re-instantiation.
+        """
         super().__init__()
 
-        self.params = params
-        self.random = random.Random(params.seed)
+        if params is None:
+            # Build params from kwargs (or use defaults from dataclass).
+            # Filter out any keys that are not fields of CivilViolenceParams
+            valid_keys = set(CivilViolenceParams.__dataclass_fields__.keys())
+            filtered = {k: v for k, v in kwargs.items() if k in valid_keys}
+            self.params = CivilViolenceParams(**filtered)
+        else:
+            self.params = params
+
+        self.random = random.Random(self.params.seed)
 
         self.grid = SingleGrid(
-            width=params.N,
-            height=params.N,
-            torus=True
+            width=self.params.N,
+            height=self.params.N,
+            torus=True,
         )
 
         self.citizens = []

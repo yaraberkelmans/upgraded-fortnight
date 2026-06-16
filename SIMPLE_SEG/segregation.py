@@ -115,17 +115,30 @@ class Household:
 
 
 class SegregationModel(Model):
-    """Basic Schelling segregation model on an N x N lattice."""
+    """Basic Schelling segregation model on an N x N lattice.
 
-    def __init__(self, params=SegregationParams()):
+    Accept either a `SegregationParams` instance via `params`, or individual
+    parameters as keyword arguments (e.g. `N=40`, `agent_density=0.8`). This
+    makes the model compatible with Solara's parameter UI which supplies
+    keyword args for re-instantiation.
+    """
+
+    def __init__(self, params: SegregationParams | None = None, **kwargs):
         super().__init__()
-        self.params = params
-        self.random = random.Random(params.seed)
+
+        if params is None:
+            valid_keys = set(SegregationParams.__dataclass_fields__.keys())
+            filtered = {k: v for k, v in kwargs.items() if k in valid_keys}
+            self.params = SegregationParams(**filtered)
+        else:
+            self.params = params
+
+        self.random = random.Random(self.params.seed)
 
         self.grid = SingleGrid(
-            width=params.N,
-            height=params.N,
-            torus=params.torus,
+            width=self.params.N,
+            height=self.params.N,
+            torus=self.params.torus,
         )
 
         self.households = []
