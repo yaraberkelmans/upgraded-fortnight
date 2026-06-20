@@ -2,9 +2,9 @@
 
 import math
 try:
-    from riot_model.fan import Fan
+    from riot_model.fan import Fan, FanGroup
 except ImportError:
-    from fan import Fan
+    from fan import Fan, FanGroup
 
 class Police:
     """Police agent that pursues and arrests fighting fans."""
@@ -69,6 +69,15 @@ class Police:
         self.model.fans.remove(fan)
         self.model.arrests_this_step += 1
         self.model.total_arrests += 1
+
+        empty_positions = list(self.model.grid.empties)
+        if empty_positions:
+            new_pos = self.model.random.choice(empty_positions)
+            group = FanGroup.HOME if self.model.random.random() < 0.5 else FanGroup.AWAY
+            new_fan = Fan(self.model, group)
+            self.model.fans.append(new_fan)
+            self.model.grid.place_agent(new_fan, new_pos)
+            new_fan.update_perceived_probabilities()
 
     def step(self):
         self.last_move_distance = 0
