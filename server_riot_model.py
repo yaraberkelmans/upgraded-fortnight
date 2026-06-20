@@ -114,11 +114,11 @@ model_params = {
     "police_vision": {"type": "SliderInt", "value": 5, "min": 1, "max": 20, "step": 1, "label": "Police vision"},
     "hawk_dove_strategy": {
         "type": "Select",
-        "value": "aggressiveness",
+        "value": "logit",
         "values": [s.value for s in HawkDoveStrategy],
         "label": "Hawk-Dove strategy",
     },
-    "hawk_dove_C": {"type": "SliderFloat", "value": 4.0, "min": 0.1, "max": 10.0, "step": 0.1, "label": "Hawk-Dove C (injury cost)"},
+    "hawk_dove_C": {"type": "SliderFloat", "value": 4.0, "min": 0.1, "max": 10.0, "step": 0.1, "label": "Hawk-Dove C (injury cost)"}, "logit_beta": {"type": "SliderFloat", "value": 5.0, "min": 0.1, "max": 20.0, "step": 0.1, "label": "Logit beta (rationality)"},
     "movement_decay": {"type": "SliderFloat", "value": 1.00, "min": 0.01, "max": 5.0, "step": 0.01, "label": "Movement decay"},
     "steps": {"type": "SliderInt", "value": 100, "min": 1, "max": 2000, "step": 1, "label": "Steps"},
     "seed": {"type": "SliderInt", "value": 42, "min": 0, "max": 100000, "step": 1, "label": "Seed"},

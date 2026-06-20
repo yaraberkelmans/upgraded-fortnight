@@ -12,9 +12,11 @@ class FanGroup(Enum):
 class HawkDoveStrategy(Enum):
     NASH_ESS = "nash_ess"
     AGGRESSIVENESS = "aggressiveness"
+    LOGIT = "logit"
     BOURGEOIS = "bourgeois"
     ANTI_BOURGEOIS = "anti_bourgeois"
     TIT_FOR_TAT = "tit_for_tat"
+    
 
 
 class Fan:
@@ -89,12 +91,17 @@ class Fan:
 
         if strategy == HawkDoveStrategy.AGGRESSIVENESS:
             return "hawk" if self.random.random() < self.aggressiveness else "dove"
+        if strategy == HawkDoveStrategy.LOGIT:
+            beta = self.model.riot_params.logit_beta
+            p_hawk = 1 / (1 + math.exp(-beta * self.fight_want))
+            return "hawk" if self.random.random() < p_hawk else "dove"
         if strategy == HawkDoveStrategy.BOURGEOIS:
             return "hawk" if self.group == FanGroup.HOME else "dove"
         if strategy == HawkDoveStrategy.ANTI_BOURGEOIS:
             return "hawk" if self.group == FanGroup.AWAY else "dove"
         if strategy == HawkDoveStrategy.TIT_FOR_TAT:
             return opponent.last_opponent_play
+    
         return "hawk"
 
     def decide_fighting(self):

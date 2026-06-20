@@ -34,10 +34,12 @@ class RiotParams:
     fan_vision: int = 2
     fight_threshold: float = 0.0
     police_vision: int = 5
-    hawk_dove_strategy: HawkDoveStrategy = HawkDoveStrategy.AGGRESSIVENESS
+    logit_beta: float = 5.0
+    hawk_dove_strategy: HawkDoveStrategy = HawkDoveStrategy.LOGIT
     hawk_dove_C: float = 4.0
     aggressiveness_mean: float | None = None
     aggressiveness_concentration: float = 12.0
+
 
     def __post_init__(self):
         if isinstance(self.hawk_dove_strategy, str):
