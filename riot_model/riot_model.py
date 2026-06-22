@@ -1,6 +1,7 @@
 """Main Mesa riot model. Agent implementations live in fan.py and police.py."""
 
 import random
+import math
 from dataclasses import dataclass
 
 from mesa import Model
@@ -25,6 +26,8 @@ class SegregationParams:
     seed: int = 42
     torus: bool = True
     count_empty_as_different: bool = True
+    zone_size: int = 10
+    warmup_entropy_threshold: float = 0.60
 
 
 @dataclass
@@ -119,6 +122,7 @@ class RiotModel(Model):
                 "Average aggressiveness": lambda m: m.average_aggressiveness(),
                 "Average perceived win probability": lambda m: m.average_perceived_win_probability(),
                 "Average perceived arrest probability": lambda m: m.average_perceived_arrest_probability(),
+                "Spatial entropy": lambda m: m.spatial_entropy(),
             }
         )
 
@@ -207,9 +211,14 @@ class RiotModel(Model):
         if steps is None:
             steps = self.segregation_params.steps
 
+        for _ in range(self.segregation_params.steps):
+            for fan in self.fans:
+                fan.move_if_unhappy()
+            self.update_all_agents()
+            if self.spatial_entropy() < self.segregation_params.warmup_entropy_threshold:
+                break
         for _ in range(steps):
             self.step()
-            # Stop early if the city is stable.
             if self.moves_this_step == 0:
                 break
 
@@ -232,6 +241,47 @@ class RiotModel(Model):
         if not self.fans:
             return 0.0
         return sum(fan.same_fraction for fan in self.fans) / len(self.fans)
+    
+    def spatial_entropy(self):
+        """Calculate spatial entropy as a measure of mixing between groups."""
+        zone_size = self.segregation_params.zone_size
+        N = self.segregation_params.N
+        n_zones_per_side = N // zone_size
+
+        total_entropy = 0.0
+        n_zones = 0
+
+        for zone_x in range(n_zones_per_side):
+            for zone_y in range(n_zones_per_side):
+                home = 0
+                away = 0
+                for x in range(zone_x * zone_size, (zone_x + 1) * zone_size):
+                    for y in range(zone_y * zone_size, (zone_y + 1) * zone_size):
+                        agent = self.grid[x][y]
+                        if isinstance(agent, Fan):
+                            if agent.group == FanGroup.HOME:
+                                home += 1
+                            else:
+                                away += 1
+
+                total = home + away
+                if total == 0:
+                    continue
+
+                p_home = home / total
+                p_away = away / total
+
+                zone_entropy = 0.0
+                if p_home > 0:
+                    zone_entropy -= p_home * math.log(p_home)
+                if p_away > 0:
+                    zone_entropy -= p_away * math.log(p_away)
+
+                total_entropy += zone_entropy
+                n_zones += 1
+
+        return total_entropy / n_zones if n_zones > 0 else 0.0
+
 
     def average_last_move_distance(self):
         if not self.fans:
