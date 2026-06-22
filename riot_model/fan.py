@@ -142,17 +142,18 @@ class Fan:
             include_center=False,
             radius=self.model.riot_params.fan_vision,
         )
-        enemy_fans = sum(
-            isinstance(agent, Fan) and agent.group != self.group
-            for agent in neighbors
-        )
-        friend_fans = sum(
-            isinstance(agent, Fan) and agent.group == self.group
-            for agent in neighbors
-        )
-        cops_in_view = sum(
-            getattr(agent, "is_police", False) for agent in neighbors
-        )
+        
+        enemy_fans = 0
+        friend_fans = 0
+        cops_in_view = 0
+        for agent in neighbors:
+            if isinstance(agent, Fan):
+                if agent.group == self.group:
+                    friend_fans += 1
+                else:
+                    enemy_fans += 1
+            elif getattr(agent, "is_police", False):
+                cops_in_view += 1
 
         friends_including_self = friend_fans + 1
         total_fans_including_self = friend_fans + enemy_fans + 1

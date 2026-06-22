@@ -99,9 +99,7 @@ class RiotModel(Model):
 
         self.create_agents()
 
-        self.update_all_happiness()
-        self.update_all_perceived_probabilities()
-        self.update_all_fighting()
+        self.update_all_agents()
 
         self.datacollector = DataCollector(
             model_reporters={
@@ -179,19 +177,13 @@ class RiotModel(Model):
         beta = (1.0 - mean) * concentration
         return self.random.betavariate(alpha, beta)
 
-    def update_all_happiness(self):
+    def update_all_agents(self):
         for fan in self.fans:
             fan.decide_happiness()
-
-    def update_all_fighting(self):
-        for fan in self.fans:
+            fan.update_perceived_probabilities()
             fan.fighting = False
         for fan in self.fans:
             fan.decide_fighting()
-
-    def update_all_perceived_probabilities(self):
-        for fan in self.fans:
-            fan.update_perceived_probabilities()
 
     def step(self):
         self.moves_this_step = 0
@@ -208,9 +200,7 @@ class RiotModel(Model):
         for agent in police_agents:
             agent.step()
 
-        self.update_all_happiness()
-        self.update_all_perceived_probabilities()
-        self.update_all_fighting()
+        self.update_all_agents()
         self.datacollector.collect(self)
 
     def run_model(self, steps=None):
