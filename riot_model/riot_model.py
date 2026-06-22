@@ -101,8 +101,20 @@ class RiotModel(Model):
         self.total_arrests = 0
 
         self.create_agents()
-
         self.update_all_agents()
+
+        # Warmup before simulation starts
+        for _ in range(self.segregation_params.steps):
+            self.moves_this_step = 0
+            for fan in self.fans:
+                fan.move_if_unhappy()
+            self.update_all_agents()
+            if self.moves_this_step == 0:
+                break
+            if self.spatial_entropy() < self.segregation_params.warmup_entropy_threshold:
+                break
+        self.moves_this_step = 0
+
 
         self.datacollector = DataCollector(
             model_reporters={
@@ -207,20 +219,43 @@ class RiotModel(Model):
         self.update_all_agents()
         self.datacollector.collect(self)
 
+    # def run_model(self, steps=None):
+    #     if steps is None:
+    #         steps = self.segregation_params.steps
+
+    #     for _ in range(self.segregation_params.steps):
+    #         for fan in self.fans:
+    #             fan.move_if_unhappy()
+    #         self.update_all_agents()
+    #         if self.spatial_entropy() < self.segregation_params.warmup_entropy_threshold:
+    #             break
+    #     for _ in range(steps):
+    #         self.step()
+    #         if self.moves_this_step == 0:
+    #             break
+
     def run_model(self, steps=None):
         if steps is None:
             steps = self.segregation_params.steps
 
+        # Warmup: only Schelling movement until convergence or entropy threshold.
         for _ in range(self.segregation_params.steps):
+            self.moves_this_step = 0
             for fan in self.fans:
                 fan.move_if_unhappy()
             self.update_all_agents()
+            if self.moves_this_step == 0:
+                break
             if self.spatial_entropy() < self.segregation_params.warmup_entropy_threshold:
                 break
+
+        # Main simulation with violence.
+        self.moves_this_step = 0
         for _ in range(steps):
             self.step()
             if self.moves_this_step == 0:
                 break
+
 
     def count_group(self, group):
         return sum(fan.group == group for fan in self.fans)
