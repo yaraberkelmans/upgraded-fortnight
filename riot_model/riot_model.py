@@ -41,7 +41,7 @@ class RiotParams:
     fight_threshold: float = 0.0
     police_vision: int = 5
     logit_beta: float = 5.0
-    hawk_dove_strategy: HawkDoveStrategy = HawkDoveStrategy.LOGIT
+    hawk_dove_strategy: HawkDoveStrategy = HawkDoveStrategy.LOGIT_PRIOR
     hawk_dove_C: float = 4.0
     aggressiveness_mean: float | None = None
     aggressiveness_concentration: float = 12.0
