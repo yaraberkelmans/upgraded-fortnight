@@ -4,12 +4,11 @@ Run with something like:
     solara run server_riot_model.py
 """
 
-import matplotlib.pyplot as plt
 import solara
 from mesa.visualization import SolaraViz, SpaceRenderer, make_plot_component
 from mesa.visualization.components import AgentPortrayalStyle
 
-from riot_model.riot_model import Fan, FanGroup, HawkDoveStrategy, Police, RiotModel, SegregationParams
+from riot_model.riot_model import Fan, FanGroup, HawkDoveStrategy, Police, RiotModel
 STATE_COLORS = {
     FanGroup.HOME: "#2f80ed",
     FanGroup.AWAY: "#f2c94c",
@@ -38,7 +37,6 @@ def post_process(ax):
 
 
 initial_model = RiotModel()
-
 renderer = SpaceRenderer(initial_model, backend="matplotlib").setup_agents(agent_portrayal)
 renderer.draw_agents()
 renderer.post_process = post_process
@@ -70,6 +68,20 @@ aggressiveness_chart = make_plot_component(
     }
 )
 
+entropy_chart = make_plot_component(
+    {
+        "Spatial entropy": "#9b51e0",
+        "Spatial entropy (fine)": "#2f80ed",
+    }
+)
+
+entropy_cv_chart = make_plot_component(
+    {
+        "Entropy CV": "#9b51e0",
+        "Entropy CV (fine)": "#2f80ed",
+    }
+)
+
 perception_chart = make_plot_component(
     {
         "Average perceived win probability": "#2f80ed",
@@ -77,30 +89,6 @@ perception_chart = make_plot_component(
     }
 )
 
-
-@solara.component
-def FightDistributions(model):
-    current_model = model.value if hasattr(model, "value") else model
-    fight_want = [fan.fight_want for fan in current_model.fans]
-    fight_margin = [fan.fight_want - fan.perceived_arrest_probability for fan in current_model.fans]
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
-
-    ax1.hist(fight_want, bins=30, color="#f2994a", edgecolor="white", alpha=0.85)
-    ax1.set_title("fight_want distribution")
-    ax1.set_xlabel("fight_want")
-    ax1.set_ylabel("fans")
-
-    ax2.hist(fight_margin, bins=30, color="#eb5757", edgecolor="white", alpha=0.85)
-    ax2.set_title("fight_want − P(arrest) distribution")
-    ax2.set_xlabel("fight_want − P(arrest)")
-    ax2.set_ylabel("fans")
-    ax2.axvline(current_model.riot_params.fight_threshold, color="#111", linestyle="--", linewidth=1, label="threshold")
-    ax2.legend(fontsize=8)
-
-    fig.tight_layout()
-    solara.FigureMatplotlib(fig)
-    plt.close(fig)
 
 model_params = {
     "N": {"type": "SliderInt", "value": 40, "min": 10, "max": 120, "step": 1, "label": "Grid size"},
@@ -124,12 +112,15 @@ model_params = {
     "seed": {"type": "SliderInt", "value": 42, "min": 0, "max": 100000, "step": 1, "label": "Seed"},
     "torus": {"type": "Checkbox", "value": True, "label": "Torus"},
     "count_empty_as_different": {"type": "Checkbox", "value": True, "label": "Count empty as different"},
+    "random_move_chance": {"type": "SliderFloat", "value": 0.005, "min": 0.001, "max": 0.15, "step": 0.001, "label": "Random move chance"},
+    "warmup_cv_threshold": {"type": "SliderFloat", "value": 0.01, "min": 0.001, "max": 0.1, "step": 0.001, "label": "Warmup CV threshold"},
+    "fighting_enabled": {"type": "Checkbox", "value": True, "label": "Fighting enabled"},
 }
 
 page = SolaraViz(
     initial_model,
     renderer,
-    components=[chart_component, arrest_chart, movement_chart, aggressiveness_chart, perception_chart, FightDistributions],
+    components=[chart_component, arrest_chart, movement_chart, aggressiveness_chart, perception_chart, entropy_chart, entropy_cv_chart],
     model_params=model_params,
     name="Mix Start Fan Model",
 )

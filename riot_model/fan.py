@@ -185,7 +185,8 @@ class Fan:
     def move_if_unhappy(self):
         self.last_move_distance = 0
         if self.decide_happiness():
-            return False
+            if self.random.random() >= self.model.segregation_params.random_move_chance:
+                return False
         new_pos = self.nearest_empty_position()
         if new_pos is None:
             return False
@@ -197,4 +198,3 @@ class Fan:
 
     def step(self):
         self.move_if_unhappy()
-        self.decide_fighting()
