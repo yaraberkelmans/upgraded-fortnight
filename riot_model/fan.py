@@ -10,12 +10,9 @@ class FanGroup(Enum):
 
 
 class HawkDoveStrategy(Enum):
-    NASH_ESS = "nash_ess"
-    AGGRESSIVENESS = "aggressiveness"
-    LOGIT = "logit"
-    BOURGEOIS = "bourgeois"
-    ANTI_BOURGEOIS = "anti_bourgeois"
-    TIT_FOR_TAT = "tit_for_tat"
+    NASH_ESS = "nash_ess"        # deterministic: p = V/C
+    LOGIT_PRIOR = "logit_prior"  # logit QRE assuming opponent plays hawk with q=0.5
+    LOGIT_QRE = "logit_qre"      # logit QRE: q estimated from local proportion, C stays
     
 
 
@@ -36,6 +33,8 @@ class Fan:
         self.perceived_arrest_probability = 0.0
         self.last_move_distance = 0
         self.last_opponent_play = "dove"
+        self.friend_fans = 0
+        self.enemy_fans = 0
 
     def torus_distance(self, pos):
         current_x, current_y = self.pos
@@ -76,32 +75,28 @@ class Fan:
     def _hawk_dove_play(self, opponent):
         strategy = self.model.riot_params.hawk_dove_strategy
         cost = self.model.riot_params.hawk_dove_C
+        beta = self.model.riot_params.logit_beta
 
         if strategy == HawkDoveStrategy.NASH_ESS:
-            neighbors = self.model.grid.get_neighbors(
-                self.pos, moore=True, include_center=False, radius=1
-            )
-            value = sum(
-                1
-                for agent in neighbors
-                if isinstance(agent, Fan) and agent.group == self.group
-            )
-            p_hawk = min(1.0, value / cost) if cost > 0 else 1.0
+            # Pure Nash mixed strategy: p = V/C where V = same-team neighbours
+            p_hawk = min(1.0, self.friend_fans / cost) if cost > 0 else 1.0
             return "hawk" if self.random.random() < p_hawk else "dove"
 
-        if strategy == HawkDoveStrategy.AGGRESSIVENESS:
-            return "hawk" if self.random.random() < self.aggressiveness else "dove"
-        if strategy == HawkDoveStrategy.LOGIT:
-            beta = self.model.riot_params.logit_beta
-            p_hawk = 1 / (1 + math.exp(-beta * self.fight_want))
+        if strategy == HawkDoveStrategy.LOGIT_PRIOR:
+            # Logit QRE with uniform prior: assumes opponent plays hawk with q=0.5
+            # ΔE = V/2 - 0.5*C/2 = friend_fans/2 - C/4
+            delta_e = self.friend_fans / 2 - cost / 4
+            p_hawk = 1 / (1 + math.exp(-beta * delta_e))
             return "hawk" if self.random.random() < p_hawk else "dove"
-        if strategy == HawkDoveStrategy.BOURGEOIS:
-            return "hawk" if self.group == FanGroup.HOME else "dove"
-        if strategy == HawkDoveStrategy.ANTI_BOURGEOIS:
-            return "hawk" if self.group == FanGroup.AWAY else "dove"
-        if strategy == HawkDoveStrategy.TIT_FOR_TAT:
-            return opponent.last_opponent_play
-    
+
+        if strategy == HawkDoveStrategy.LOGIT_QRE:
+            # Logit QRE: q estimated from local proportion, C preserved in delta_e
+            total = self.friend_fans + self.enemy_fans
+            q = self.enemy_fans / total if total > 0 else 0.5
+            delta_e = self.friend_fans / 2 - q * cost / 2
+            p_hawk = 1 / (1 + math.exp(-beta * delta_e))
+            return "hawk" if self.random.random() < p_hawk else "dove"
+
         return "hawk"
 
     def decide_fighting(self):
@@ -143,23 +138,23 @@ class Fan:
             radius=self.model.riot_params.fan_vision,
         )
         
-        enemy_fans = 0
-        friend_fans = 0
+        self.enemy_fans = 0
+        self.friend_fans = 0
         cops_in_view = 0
         for agent in neighbors:
             if isinstance(agent, Fan):
                 if agent.group == self.group:
-                    friend_fans += 1
+                    self.friend_fans += 1
                 else:
-                    enemy_fans += 1
+                    self.enemy_fans += 1
             elif getattr(agent, "is_police", False):
                 cops_in_view += 1
 
-        friends_including_self = friend_fans + 1
-        total_fans_including_self = friend_fans + enemy_fans + 1
+        friends_including_self = self.friend_fans + 1
+        total_fans_including_self = self.friend_fans + self.enemy_fans + 1
         k = self.model.riot_params.perception_k
         self.perceived_win_probability = math.exp(
-            -k * (enemy_fans / friends_including_self)
+            -k * (self.enemy_fans / friends_including_self)
         )
         self.perceived_arrest_probability = 1 - math.exp(
             -k * (5 * cops_in_view / total_fans_including_self)

@@ -102,7 +102,7 @@ model_params = {
     "police_vision": {"type": "SliderInt", "value": 5, "min": 1, "max": 20, "step": 1, "label": "Police vision"},
     "hawk_dove_strategy": {
         "type": "Select",
-        "value": "logit",
+        "value": "logit_qre",
         "values": [s.value for s in HawkDoveStrategy],
         "label": "Hawk-Dove strategy",
     },
