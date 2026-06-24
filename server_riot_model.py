@@ -70,14 +70,12 @@ aggressiveness_chart = make_plot_component(
 
 entropy_chart = make_plot_component(
     {
-        "Spatial entropy": "#9b51e0",
         "Spatial entropy (fine)": "#2f80ed",
     }
 )
 
 entropy_cv_chart = make_plot_component(
     {
-        "Entropy CV": "#9b51e0",
         "Entropy CV (fine)": "#2f80ed",
     }
 )

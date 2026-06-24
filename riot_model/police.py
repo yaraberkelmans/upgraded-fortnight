@@ -32,14 +32,13 @@ class Police:
         empty_positions = list(self.model.grid.empties)
         if not empty_positions:
             return None
-        distances = [self.torus_distance(pos) for pos in empty_positions]
-        weights = [
-            math.exp(
-                -self.model.segregation_params.movement_decay * distance
-            )
-            for distance in distances
-        ]
-        return self.random.choices(empty_positions, weights=weights, k=1)[0]
+        decay = self.model.segregation_params.movement_decay
+        candidates = [(pos, self.torus_distance(pos)) for pos in empty_positions]
+        local = [(pos, d) for pos, d in candidates if d <= 5]
+        if not local:
+            local = candidates
+        weights = [math.exp(-decay * d) for _, d in local]
+        return self.random.choices([pos for pos, _ in local], weights=weights, k=1)[0]
 
     def move(self):
         self.last_move_distance = 0

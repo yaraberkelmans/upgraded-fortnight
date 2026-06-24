@@ -4,6 +4,8 @@ import random
 import math
 from dataclasses import dataclass
 
+import numpy as np
+
 from mesa import Model
 from mesa.datacollection import DataCollector
 from mesa.space import SingleGrid
@@ -104,7 +106,7 @@ class RiotModel(Model):
         self.arrests_this_step = 0
         self.total_arrests = 0
         self.in_warmup = True
-        self._warmup_entropy_history = []
+        self._last_entropy_fine = 0.0
         self._warmup_entropy_fine_history = []
 
         self.create_agents()
@@ -128,9 +130,7 @@ class RiotModel(Model):
                 "Average aggressiveness": lambda m: m.average_aggressiveness(),
                 "Average perceived win probability": lambda m: m.average_perceived_win_probability(),
                 "Average perceived arrest probability": lambda m: m.average_perceived_arrest_probability(),
-                "Spatial entropy": lambda m: m.spatial_entropy(),
-                "Spatial entropy (fine)": lambda m: m.spatial_entropy_fine(),
-                "Entropy CV": lambda m: m.entropy_cv(),
+                "Spatial entropy (fine)": lambda m: m._last_entropy_fine,
                 "Entropy CV (fine)": lambda m: m.entropy_cv_fine(),
                 "In warmup": lambda m: int(m.in_warmup),
             }
@@ -192,13 +192,17 @@ class RiotModel(Model):
         return self.random.betavariate(alpha, beta)
 
     def update_all_agents(self):
+        r1_neighbors = {
+            fan: self.grid.get_neighbors(fan.pos, moore=True, include_center=False, radius=1)
+            for fan in self.fans
+        }
         for fan in self.fans:
-            fan.decide_happiness()
+            fan.decide_happiness(r1_neighbors[fan])
             fan.update_perceived_probabilities()
             fan.fighting = False
         if not self.in_warmup and self.riot_params.fighting_enabled:
             for fan in self.fans:
-                fan.decide_fighting()
+                fan.decide_fighting(r1_neighbors[fan])
 
     def step(self):
         self.moves_this_step = 0
@@ -212,8 +216,8 @@ class RiotModel(Model):
                 fan.move_if_unhappy()
             self.update_all_agents()
 
-            self._warmup_entropy_history.append(self.spatial_entropy())
-            self._warmup_entropy_fine_history.append(self.spatial_entropy_fine())
+            self._last_entropy_fine = self.spatial_entropy_fine()
+            self._warmup_entropy_fine_history.append(self._last_entropy_fine)
 
             fine_window = self._warmup_entropy_fine_history[-self.segregation_params.warmup_window:]
             if self.moves_this_step == 0:
@@ -234,8 +238,8 @@ class RiotModel(Model):
 
             self.update_all_agents()
 
-            self._warmup_entropy_history.append(self.spatial_entropy())
-            self._warmup_entropy_fine_history.append(self.spatial_entropy_fine())
+            self._last_entropy_fine = self.spatial_entropy_fine()
+            self._warmup_entropy_fine_history.append(self._last_entropy_fine)
 
         self.datacollector.collect(self)
 
@@ -268,37 +272,32 @@ class RiotModel(Model):
     
     def _zone_entropy(self, zone_size: int) -> float:
         N = self.segregation_params.N
-        n_zones_per_side = N // zone_size
-        total_entropy = 0.0
-        n_zones = 0
-        for zone_x in range(n_zones_per_side):
-            for zone_y in range(n_zones_per_side):
-                home = 0
-                away = 0
-                for x in range(zone_x * zone_size, (zone_x + 1) * zone_size):
-                    for y in range(zone_y * zone_size, (zone_y + 1) * zone_size):
-                        agent = self.grid[x][y]
-                        if isinstance(agent, Fan):
-                            if agent.group == FanGroup.HOME:
-                                home += 1
-                            else:
-                                away += 1
-                total = home + away
-                if total == 0:
-                    continue
-                p_home = home / total
-                p_away = away / total
-                zone_entropy = 0.0
-                if p_home > 0:
-                    zone_entropy -= p_home * math.log(p_home)
-                if p_away > 0:
-                    zone_entropy -= p_away * math.log(p_away)
-                total_entropy += zone_entropy
-                n_zones += 1
-        return total_entropy / n_zones if n_zones > 0 else 0.0
+        n_zones = N // zone_size
 
-    def spatial_entropy(self):
-        return self._zone_entropy(self.segregation_params.zone_size)
+        home = np.zeros((N, N), dtype=np.float32)
+        away = np.zeros((N, N), dtype=np.float32)
+        for fan in self.fans:
+            x, y = fan.pos
+            if fan.group == FanGroup.HOME:
+                home[x, y] = 1.0
+            else:
+                away[x, y] = 1.0
+
+        home_z = home.reshape(n_zones, zone_size, n_zones, zone_size).sum(axis=(1, 3))
+        away_z = away.reshape(n_zones, zone_size, n_zones, zone_size).sum(axis=(1, 3))
+        total_z = home_z + away_z
+
+        mask = total_z > 0
+        p_home = np.where(mask, home_z / np.where(mask, total_z, 1), 0.0)
+        p_away = np.where(mask, away_z / np.where(mask, total_z, 1), 0.0)
+
+        entropy = (
+            -np.where(p_home > 0, p_home * np.log(p_home), 0.0)
+            - np.where(p_away > 0, p_away * np.log(p_away), 0.0)
+        )
+
+        n_nonempty = mask.sum()
+        return float(entropy[mask].sum() / n_nonempty) if n_nonempty > 0 else 0.0
 
     def spatial_entropy_fine(self):
         return self._zone_entropy(self.segregation_params.zone_size_fine)
@@ -311,10 +310,6 @@ class RiotModel(Model):
             return 0.0
         std = math.sqrt(sum((x - mean) ** 2 for x in window) / len(window))
         return std / mean
-
-    def entropy_cv(self):
-        window = self._warmup_entropy_history[-self.segregation_params.warmup_window:]
-        return self._cv(window)
 
     def entropy_cv_fine(self):
         window = self._warmup_entropy_fine_history[-self.segregation_params.warmup_window:]

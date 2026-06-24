@@ -48,15 +48,11 @@ class Fan:
             dy = min(dy, height - dy)
         return max(dx, dy)
 
-    def calculate_same_fraction(self):
-        neighbors = self.model.grid.get_neighbors(
-            self.pos, moore=True, include_center=False, radius=1
-        )
+    def calculate_same_fraction(self, neighbors):
         same = sum(
             isinstance(agent, Fan) and agent.group == self.group
             for agent in neighbors
         )
-
         denominator = (
             8
             if self.model.segregation_params.count_empty_as_different
@@ -64,8 +60,12 @@ class Fan:
         )
         return 1.0 if denominator == 0 else same / denominator
 
-    def decide_happiness(self):
-        self.same_fraction = self.calculate_same_fraction()
+    def decide_happiness(self, neighbors=None):
+        if neighbors is None:
+            neighbors = self.model.grid.get_neighbors(
+                self.pos, moore=True, include_center=False, radius=1
+            )
+        self.same_fraction = self.calculate_same_fraction(neighbors)
         self.happy = (
             self.same_fraction
             >= self.model.segregation_params.similarity_threshold
@@ -99,10 +99,11 @@ class Fan:
 
         return "hawk"
 
-    def decide_fighting(self):
-        neighbors = self.model.grid.get_neighbors(
-            self.pos, moore=True, include_center=False, radius=1
-        )
+    def decide_fighting(self, neighbors=None):
+        if neighbors is None:
+            neighbors = self.model.grid.get_neighbors(
+                self.pos, moore=True, include_center=False, radius=1
+            )
         opposing_fans = [
             agent
             for agent in neighbors
@@ -168,14 +169,13 @@ class Fan:
         empty_positions = list(self.model.grid.empties)
         if not empty_positions:
             return None
-        distances = [self.torus_distance(pos) for pos in empty_positions]
-        weights = [
-            math.exp(
-                -self.model.segregation_params.movement_decay * distance
-            )
-            for distance in distances
-        ]
-        return self.random.choices(empty_positions, weights=weights, k=1)[0]
+        decay = self.model.segregation_params.movement_decay
+        candidates = [(pos, self.torus_distance(pos)) for pos in empty_positions]
+        local = [(pos, d) for pos, d in candidates if d <= 5]
+        if not local:
+            local = candidates
+        weights = [math.exp(-decay * d) for _, d in local]
+        return self.random.choices([pos for pos, _ in local], weights=weights, k=1)[0]
 
     def move_if_unhappy(self):
         self.last_move_distance = 0
@@ -188,7 +188,6 @@ class Fan:
         self.last_move_distance = self.torus_distance(new_pos)
         self.model.grid.move_agent(self, new_pos)
         self.model.moves_this_step += 1
-        self.decide_happiness()
         return True
 
     def step(self):
