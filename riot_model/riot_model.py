@@ -27,7 +27,10 @@ class SegregationParams:
     torus: bool = True
     count_empty_as_different: bool = True
     zone_size: int = 10
-    warmup_entropy_threshold: float = 0.60
+    zone_size_fine: int = 4
+    warmup_cv_threshold: float = 0.01
+    warmup_window: int = 10
+    random_move_chance: float = 0.005
 
 
 @dataclass
@@ -38,10 +41,11 @@ class RiotParams:
     fight_threshold: float = 0.0
     police_vision: int = 5
     logit_beta: float = 5.0
-    hawk_dove_strategy: HawkDoveStrategy = HawkDoveStrategy.LOGIT
+    hawk_dove_strategy: HawkDoveStrategy = HawkDoveStrategy.LOGIT_PRIOR
     hawk_dove_C: float = 4.0
     aggressiveness_mean: float | None = None
     aggressiveness_concentration: float = 12.0
+    fighting_enabled: bool = True
 
 
     def __post_init__(self):
@@ -99,22 +103,12 @@ class RiotModel(Model):
         self.moves_this_step = 0
         self.arrests_this_step = 0
         self.total_arrests = 0
+        self.in_warmup = True
+        self._warmup_entropy_history = []
+        self._warmup_entropy_fine_history = []
 
         self.create_agents()
         self.update_all_agents()
-
-        # Warmup before simulation starts
-        for _ in range(self.segregation_params.steps):
-            self.moves_this_step = 0
-            for fan in self.fans:
-                fan.move_if_unhappy()
-            self.update_all_agents()
-            if self.moves_this_step == 0:
-                break
-            if self.spatial_entropy() < self.segregation_params.warmup_entropy_threshold:
-                break
-        self.moves_this_step = 0
-
 
         self.datacollector = DataCollector(
             model_reporters={
@@ -135,6 +129,10 @@ class RiotModel(Model):
                 "Average perceived win probability": lambda m: m.average_perceived_win_probability(),
                 "Average perceived arrest probability": lambda m: m.average_perceived_arrest_probability(),
                 "Spatial entropy": lambda m: m.spatial_entropy(),
+                "Spatial entropy (fine)": lambda m: m.spatial_entropy_fine(),
+                "Entropy CV": lambda m: m.entropy_cv(),
+                "Entropy CV (fine)": lambda m: m.entropy_cv_fine(),
+                "In warmup": lambda m: int(m.in_warmup),
             }
         )
 
@@ -198,63 +196,54 @@ class RiotModel(Model):
             fan.decide_happiness()
             fan.update_perceived_probabilities()
             fan.fighting = False
-        for fan in self.fans:
-            fan.decide_fighting()
+        if not self.in_warmup and self.riot_params.fighting_enabled:
+            for fan in self.fans:
+                fan.decide_fighting()
 
     def step(self):
         self.moves_this_step = 0
         self.arrests_this_step = 0
-        agents = self.fans[:]
-        self.random.shuffle(agents)
 
-        for agent in agents:
-            agent.step()
+        if self.in_warmup:
+            # Warmup phase: Schelling movement only, no fighting.
+            agents = self.fans[:]
+            self.random.shuffle(agents)
+            for fan in agents:
+                fan.move_if_unhappy()
+            self.update_all_agents()
 
-        police_agents = self.police[:]
-        self.random.shuffle(police_agents)
+            self._warmup_entropy_history.append(self.spatial_entropy())
+            self._warmup_entropy_fine_history.append(self.spatial_entropy_fine())
 
-        for agent in police_agents:
-            agent.step()
+            fine_window = self._warmup_entropy_fine_history[-self.segregation_params.warmup_window:]
+            if self.moves_this_step == 0:
+                self.in_warmup = False
+            elif len(fine_window) >= self.segregation_params.warmup_window:
+                if self._cv(fine_window) < self.segregation_params.warmup_cv_threshold:
+                    self.in_warmup = False
+        else:
+            agents = self.fans[:]
+            self.random.shuffle(agents)
+            for fan in agents:
+                fan.step()
 
-        self.update_all_agents()
+            police_agents = self.police[:]
+            self.random.shuffle(police_agents)
+            for agent in police_agents:
+                agent.step()
+
+            self.update_all_agents()
+
+            self._warmup_entropy_history.append(self.spatial_entropy())
+            self._warmup_entropy_fine_history.append(self.spatial_entropy_fine())
+
         self.datacollector.collect(self)
-
-    # def run_model(self, steps=None):
-    #     if steps is None:
-    #         steps = self.segregation_params.steps
-
-    #     for _ in range(self.segregation_params.steps):
-    #         for fan in self.fans:
-    #             fan.move_if_unhappy()
-    #         self.update_all_agents()
-    #         if self.spatial_entropy() < self.segregation_params.warmup_entropy_threshold:
-    #             break
-    #     for _ in range(steps):
-    #         self.step()
-    #         if self.moves_this_step == 0:
-    #             break
 
     def run_model(self, steps=None):
         if steps is None:
             steps = self.segregation_params.steps
-
-        # Warmup: only Schelling movement until convergence or entropy threshold.
-        for _ in range(self.segregation_params.steps):
-            self.moves_this_step = 0
-            for fan in self.fans:
-                fan.move_if_unhappy()
-            self.update_all_agents()
-            if self.moves_this_step == 0:
-                break
-            if self.spatial_entropy() < self.segregation_params.warmup_entropy_threshold:
-                break
-
-        # Main simulation with violence.
-        self.moves_this_step = 0
         for _ in range(steps):
             self.step()
-            if self.moves_this_step == 0:
-                break
 
 
     def count_group(self, group):
@@ -277,15 +266,11 @@ class RiotModel(Model):
             return 0.0
         return sum(fan.same_fraction for fan in self.fans) / len(self.fans)
     
-    def spatial_entropy(self):
-        """Calculate spatial entropy as a measure of mixing between groups."""
-        zone_size = self.segregation_params.zone_size
+    def _zone_entropy(self, zone_size: int) -> float:
         N = self.segregation_params.N
         n_zones_per_side = N // zone_size
-
         total_entropy = 0.0
         n_zones = 0
-
         for zone_x in range(n_zones_per_side):
             for zone_y in range(n_zones_per_side):
                 home = 0
@@ -298,25 +283,42 @@ class RiotModel(Model):
                                 home += 1
                             else:
                                 away += 1
-
                 total = home + away
                 if total == 0:
                     continue
-
                 p_home = home / total
                 p_away = away / total
-
                 zone_entropy = 0.0
                 if p_home > 0:
                     zone_entropy -= p_home * math.log(p_home)
                 if p_away > 0:
                     zone_entropy -= p_away * math.log(p_away)
-
                 total_entropy += zone_entropy
                 n_zones += 1
-
         return total_entropy / n_zones if n_zones > 0 else 0.0
 
+    def spatial_entropy(self):
+        return self._zone_entropy(self.segregation_params.zone_size)
+
+    def spatial_entropy_fine(self):
+        return self._zone_entropy(self.segregation_params.zone_size_fine)
+
+    def _cv(self, window: list) -> float:
+        if len(window) < 2:
+            return 0.0
+        mean = sum(window) / len(window)
+        if mean == 0:
+            return 0.0
+        std = math.sqrt(sum((x - mean) ** 2 for x in window) / len(window))
+        return std / mean
+
+    def entropy_cv(self):
+        window = self._warmup_entropy_history[-self.segregation_params.warmup_window:]
+        return self._cv(window)
+
+    def entropy_cv_fine(self):
+        window = self._warmup_entropy_fine_history[-self.segregation_params.warmup_window:]
+        return self._cv(window)
 
     def average_last_move_distance(self):
         if not self.fans:
