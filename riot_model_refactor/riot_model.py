@@ -1,4 +1,13 @@
-"""Main Mesa riot model. Agent implementations live in fan.py and police.py."""
+"""Spatially-vectorized riot model (refactor variant).
+
+Behaviour matches ``riot_model.riot_model`` bit-for-bit on the same seed. The
+only difference is *how* per-tick neighbour counts and aggregate statistics are
+computed: instead of one ``grid.get_neighbors`` query + Python count loop per
+fan, the model rebuilds a small stack of ``(N, N)`` occupancy planes once per
+tick and derives every count with vectorized numpy box-sums. Movement and
+fighting stay agent/grid-driven (sequential and RNG-ordered), so the random
+number stream — and therefore the trajectory — is unchanged.
+"""
 
 import random
 import math
@@ -10,12 +19,35 @@ from mesa import Model
 from mesa.datacollection import DataCollector
 from mesa.space import SingleGrid
 
-try:    
-    from riot_model.fan import Fan, FanGroup, HawkDoveStrategy
-    from riot_model.police import Police
-except ImportError:   
+try:
+    from riot_model_refactor.fan import Fan, FanGroup, HawkDoveStrategy
+    from riot_model_refactor.police import Police
+except ImportError:
     from fan import Fan, FanGroup, HawkDoveStrategy
     from police import Police
+
+
+def _box_sum(plane, radius, wrap):
+    """Sum each cell's (2r+1)^2 Moore window, center EXCLUDED, over the lattice.
+
+    Pure numpy: the loop is over the fixed kernel offsets (8 for r=1, 24 for
+    r=2), NOT over agents — its cost does not grow with the number of fans. Each
+    iteration is a single vectorized add over the whole grid. ``wrap`` selects
+    torus (``"wrap"``) vs bounded (``"constant"`` zero-pad) edges to match
+    ``grid.get_neighbors``.
+    """
+    mode = "wrap" if wrap else "constant"
+    N = plane.shape[0]
+    padded = np.pad(plane, radius, mode=mode)
+    total = np.zeros_like(plane)
+    for dx in range(-radius, radius + 1):
+        for dy in range(-radius, radius + 1):
+            if dx == 0 and dy == 0:
+                continue
+            total += padded[radius + dx:radius + dx + N,
+                            radius + dy:radius + dy + N]
+    return total
+
 
 @dataclass
 class SegregationParams:
@@ -109,6 +141,24 @@ class RiotModel(Model):
         self._last_entropy_fine = 0.0
         self._warmup_entropy_fine_history = []
 
+        # Cached aggregate statistics, refreshed every tick by
+        # _build_spatial_state(); the datacollector reporters read these.
+        self._home_occ = None
+        self._away_occ = None
+        self._home1 = None
+        self._away1 = None
+        self._stat_n_fans = 0
+        self._stat_happy = 0
+        self._stat_home = 0
+        self._stat_away = 0
+        self._stat_fighting = 0
+        self._stat_sum_same = 0.0
+        self._stat_sum_pwin = 0.0
+        self._stat_sum_parr = 0.0
+        self._stat_sum_aggr = 0.0
+        self._stat_sum_lmd = 0.0
+        self._stat_moved = 0
+
         self.create_agents()
         self.update_all_agents()
 
@@ -191,18 +241,120 @@ class RiotModel(Model):
         beta = (1.0 - mean) * concentration
         return self.random.betavariate(alpha, beta)
 
-    def update_all_agents(self):
-        r1_neighbors = {
-            fan: self.grid.get_neighbors(fan.pos, moore=True, include_center=False, radius=1)
-            for fan in self.fans
-        }
+    def _build_spatial_state(self):
+        """Rebuild the spatial planes and refresh per-fan + aggregate state.
+
+        Runs once per tick after all movement/arrests have settled. Computes
+        neighbour counts via vectorized box-sums, writes perceived
+        probabilities and happiness back onto each fan, and caches the
+        aggregate statistics consumed by the datacollector. Does NOT touch the
+        RNG, so trajectories stay identical to the grid-based model.
+        """
+        N = self.segregation_params.N
+        wrap = self.segregation_params.torus
+
+        home = np.zeros((N, N), dtype=np.int64)
+        away = np.zeros((N, N), dtype=np.int64)
+        police = np.zeros((N, N), dtype=np.int64)
         for fan in self.fans:
-            fan.decide_happiness(r1_neighbors[fan])
-            fan.update_perceived_probabilities()
+            x, y = fan.pos
+            if fan.group == FanGroup.HOME:
+                home[x, y] = 1
+            else:
+                away[x, y] = 1
+        for cop in self.police:
+            x, y = cop.pos
+            police[x, y] = 1
+
+        self._home_occ = home
+        self._away_occ = away
+
+        fan_vision = self.riot_params.fan_vision
+        home_v = _box_sum(home, fan_vision, wrap)
+        away_v = _box_sum(away, fan_vision, wrap)
+        cop_v = _box_sum(police, fan_vision, wrap)
+        home1 = _box_sum(home, 1, wrap)
+        away1 = _box_sum(away, 1, wrap)
+        police1 = _box_sum(police, 1, wrap)
+        self._home1 = home1
+        self._away1 = away1
+
+        stat_happy = 0
+        sum_same = 0.0
+        sum_pwin = 0.0
+        sum_parr = 0.0
+        sum_aggr = 0.0
+        sum_lmd = 0.0
+        moved = 0
+        n_home = 0
+        n_away = 0
+
+        for fan in self.fans:
+            x, y = fan.pos
+            if fan.group == FanGroup.HOME:
+                friend = int(home_v[x, y])
+                enemy = int(away_v[x, y])
+                same1 = int(home1[x, y])
+                n_home += 1
+            else:
+                friend = int(away_v[x, y])
+                enemy = int(home_v[x, y])
+                same1 = int(away1[x, y])
+                n_away += 1
+            cops = int(cop_v[x, y])
+            total_agents1 = int(home1[x, y] + away1[x, y] + police1[x, y])
+
+            fan.set_perceived_from_counts(friend, enemy, cops)
+            fan.set_happiness_from_counts(same1, total_agents1)
             fan.fighting = False
+
+            stat_happy += fan.happy
+            sum_same += fan.same_fraction
+            sum_pwin += fan.perceived_win_probability
+            sum_parr += fan.perceived_arrest_probability
+            sum_aggr += fan.aggressiveness
+            lmd = fan.last_move_distance
+            sum_lmd += lmd
+            if lmd > 0:
+                moved += 1
+
+        self._stat_n_fans = len(self.fans)
+        self._stat_happy = stat_happy
+        self._stat_home = n_home
+        self._stat_away = n_away
+        self._stat_sum_same = sum_same
+        self._stat_sum_pwin = sum_pwin
+        self._stat_sum_parr = sum_parr
+        self._stat_sum_aggr = sum_aggr
+        self._stat_sum_lmd = sum_lmd
+        self._stat_moved = moved
+        self._stat_fighting = 0
+
+    def update_all_agents(self):
+        self._build_spatial_state()
+
         if not self.in_warmup and self.riot_params.fighting_enabled:
+            threshold = self.riot_params.fight_threshold
             for fan in self.fans:
-                fan.decide_fighting(r1_neighbors[fan])
+                # Same early-return predicate as Fan.decide_fighting, evaluated
+                # cheaply from the spatial planes so we only pay for a radius-1
+                # get_neighbors when this fan can actually fight this tick.
+                fan.fight_want = fan.aggressiveness * fan.perceived_win_probability
+                margin = fan.fight_want - fan.perceived_arrest_probability
+                x, y = fan.pos
+                enemy1 = (
+                    int(self._away1[x, y])
+                    if fan.group == FanGroup.HOME
+                    else int(self._home1[x, y])
+                )
+                if enemy1 == 0 or margin <= threshold:
+                    continue
+                neighbors = self.grid.get_neighbors(
+                    fan.pos, moore=True, include_center=False, radius=1
+                )
+                fan.decide_fighting(neighbors)
+
+            self._stat_fighting = sum(fan.fighting for fan in self.fans)
 
     def step(self):
         self.moves_this_step = 0
@@ -251,37 +403,35 @@ class RiotModel(Model):
 
 
     def count_group(self, group):
-        return sum(fan.group == group for fan in self.fans)
+        return self._stat_home if group == FanGroup.HOME else self._stat_away
 
     def count_happy(self):
-        return sum(fan.happy for fan in self.fans)
+        return self._stat_happy
 
     def count_unhappy(self):
-        return len(self.fans) - self.count_happy()
+        return self._stat_n_fans - self._stat_happy
 
     def count_police(self):
         return len(self.police)
 
     def count_fighting_fans(self):
-        return sum(fan.fighting for fan in self.fans)
+        return self._stat_fighting
 
     def average_similarity(self):
-        if not self.fans:
+        if not self._stat_n_fans:
             return 0.0
-        return sum(fan.same_fraction for fan in self.fans) / len(self.fans)
-    
+        return self._stat_sum_same / self._stat_n_fans
+
     def _zone_entropy(self, zone_size: int) -> float:
+        # Reuses the occupancy planes built in _build_spatial_state(); cast to
+        # float32 and using the identical expressions keeps this bit-for-bit
+        # equal to the grid-based model (entropy feeds the warmup-exit CV check,
+        # so it must match exactly).
         N = self.segregation_params.N
         n_zones = N // zone_size
 
-        home = np.zeros((N, N), dtype=np.float32)
-        away = np.zeros((N, N), dtype=np.float32)
-        for fan in self.fans:
-            x, y = fan.pos
-            if fan.group == FanGroup.HOME:
-                home[x, y] = 1.0
-            else:
-                away[x, y] = 1.0
+        home = self._home_occ.astype(np.float32)
+        away = self._away_occ.astype(np.float32)
 
         home_z = home.reshape(n_zones, zone_size, n_zones, zone_size).sum(axis=(1, 3))
         away_z = away.reshape(n_zones, zone_size, n_zones, zone_size).sum(axis=(1, 3))
@@ -317,30 +467,29 @@ class RiotModel(Model):
         return self._cv(window)
 
     def average_last_move_distance(self):
-        if not self.fans:
+        if not self._stat_n_fans:
             return 0.0
-        return sum(fan.last_move_distance for fan in self.fans) / len(self.fans)
+        return self._stat_sum_lmd / self._stat_n_fans
 
     def average_last_move_distance_of_moved_fans(self):
-        moved_fans = [fan for fan in self.fans if fan.last_move_distance > 0]
-        if not moved_fans:
+        if not self._stat_moved:
             return 0.0
-        return sum(fan.last_move_distance for fan in moved_fans) / len(moved_fans)
+        return self._stat_sum_lmd / self._stat_moved
 
     def average_aggressiveness(self):
-        if not self.fans:
+        if not self._stat_n_fans:
             return 0.0
-        return sum(fan.aggressiveness for fan in self.fans) / len(self.fans)
+        return self._stat_sum_aggr / self._stat_n_fans
 
     def average_perceived_win_probability(self):
-        if not self.fans:
+        if not self._stat_n_fans:
             return 0.0
-        return sum(fan.perceived_win_probability for fan in self.fans) / len(self.fans)
+        return self._stat_sum_pwin / self._stat_n_fans
 
     def average_perceived_arrest_probability(self):
-        if not self.fans:
+        if not self._stat_n_fans:
             return 0.0
-        return sum(fan.perceived_arrest_probability for fan in self.fans) / len(self.fans)
+        return self._stat_sum_parr / self._stat_n_fans
 
     @property
     def params(self):

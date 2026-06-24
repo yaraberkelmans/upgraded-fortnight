@@ -17,8 +17,13 @@ STATE_COLORS = {
 
 
 def agent_portrayal(agent):
+    # Supply x/y ourselves so Mesa never falls back to its internal
+    # `_get_agent_pos`, which assumes `agent.cell`. When SolaraViz steps the
+    # model in a background thread, a render can catch an agent mid-arrest with
+    # `pos` already nulled by `grid.remove_agent`; guard against that here.
+    pos = agent.pos if agent.pos is not None else (0, 0)
     size = 120 + min(agent.last_move_distance, 6) * 25
-    portrayal = AgentPortrayalStyle(size=size)
+    portrayal = AgentPortrayalStyle(x=pos[0], y=pos[1], size=size)
     if isinstance(agent, Fan):
         if agent.fighting:
             portrayal.update(("color", "#eb5757"))

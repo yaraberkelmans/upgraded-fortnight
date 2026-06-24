@@ -1,8 +1,8 @@
-"""Police agent for the riot model."""
+"""Police agent for the riot model (refactor variant)."""
 
 import math
 try:
-    from riot_model.fan import Fan, FanGroup
+    from riot_model_refactor.fan import Fan, FanGroup
 except ImportError:
     from fan import Fan, FanGroup
 
@@ -102,6 +102,9 @@ class Police:
             new_fan = Fan(self.model, group)
             self.model.fans.append(new_fan)
             self.model.grid.place_agent(new_fan, new_pos)
+            # Gives the new fan sane values immediately; the end-of-tick
+            # _build_spatial_state() recomputes it anyway. Consumes no RNG, so
+            # keeping it preserves exact parity with the original model.
             new_fan.update_perceived_probabilities()
 
     def step(self):

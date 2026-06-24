@@ -1,4 +1,4 @@
-"""Fan agent and fan-related enums for the riot model."""
+"""Fan agent and fan-related enums for the riot model (refactor variant)."""
 
 import math
 from enum import Enum
@@ -13,7 +13,7 @@ class HawkDoveStrategy(Enum):
     NASH_ESS = "nash_ess"        # deterministic: p = V/C
     LOGIT_PRIOR = "logit_prior"  # logit QRE assuming opponent plays hawk with q=0.5
     LOGIT_QRE = "logit_qre"      # logit QRE: q estimated from local proportion, C stays
-    
+
 
 
 class Fan:
@@ -66,6 +66,24 @@ class Fan:
                 self.pos, moore=True, include_center=False, radius=1
             )
         self.same_fraction = self.calculate_same_fraction(neighbors)
+        self.happy = (
+            self.same_fraction
+            >= self.model.segregation_params.similarity_threshold
+        )
+        return self.happy
+
+    def set_happiness_from_counts(self, same_count, total_agents):
+        """Set same_fraction / happy from precomputed radius-1 neighbour counts.
+
+        Mirrors ``calculate_same_fraction`` exactly: denominator is 8 when empty
+        cells count as different, otherwise the number of agents (fans AND
+        police) in the Moore-1 neighbourhood.
+        """
+        if self.model.segregation_params.count_empty_as_different:
+            denominator = 8
+        else:
+            denominator = total_agents
+        self.same_fraction = 1.0 if denominator == 0 else same_count / denominator
         self.happy = (
             self.same_fraction
             >= self.model.segregation_params.similarity_threshold
@@ -131,6 +149,29 @@ class Fan:
             opponent.fighting = True
         return self.fighting
 
+    def set_perceived_from_counts(self, friend, enemy, cops):
+        """Set perceived probabilities from precomputed neighbour counts.
+
+        Single source of truth for the perception formula; both the grid-based
+        ``update_perceived_probabilities`` and the model's vectorized batch path
+        feed into this.
+        """
+        self.friend_fans = friend
+        self.enemy_fans = enemy
+        friends_including_self = friend + 1
+        total_fans_including_self = friend + enemy + 1
+        k = self.model.riot_params.perception_k
+        self.perceived_win_probability = math.exp(
+            -k * (enemy / friends_including_self)
+        )
+        self.perceived_arrest_probability = 1 - math.exp(
+            -k * (5 * cops / total_fans_including_self)
+        )
+        return (
+            self.perceived_win_probability,
+            self.perceived_arrest_probability,
+        )
+
     def update_perceived_probabilities(self):
         neighbors = self.model.grid.get_neighbors(
             self.pos,
@@ -138,32 +179,20 @@ class Fan:
             include_center=False,
             radius=self.model.riot_params.fan_vision,
         )
-        
-        self.enemy_fans = 0
-        self.friend_fans = 0
+
+        enemy_fans = 0
+        friend_fans = 0
         cops_in_view = 0
         for agent in neighbors:
             if isinstance(agent, Fan):
                 if agent.group == self.group:
-                    self.friend_fans += 1
+                    friend_fans += 1
                 else:
-                    self.enemy_fans += 1
+                    enemy_fans += 1
             elif getattr(agent, "is_police", False):
                 cops_in_view += 1
 
-        friends_including_self = self.friend_fans + 1
-        total_fans_including_self = self.friend_fans + self.enemy_fans + 1
-        k = self.model.riot_params.perception_k
-        self.perceived_win_probability = math.exp(
-            -k * (self.enemy_fans / friends_including_self)
-        )
-        self.perceived_arrest_probability = 1 - math.exp(
-            -k * (5 * cops_in_view / total_fans_including_self)
-        )
-        return (
-            self.perceived_win_probability,
-            self.perceived_arrest_probability,
-        )
+        return self.set_perceived_from_counts(friend_fans, enemy_fans, cops_in_view)
 
     def nearest_empty_position(self):
         # Enumerate only the radius-5 window around the agent and keep the empty
