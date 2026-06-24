@@ -1,0 +1,189 @@
+{
+  "mean_fighting": {
+    "label": "Mean fighting fans",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.09771932509755482,
+      "fight_threshold": 0.8192467803078216,
+      "hawk_dove_C": 0.05303531158561488,
+      "police_density": 0.006798634808419272
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.20896582097749294,
+      "fight_threshold": 0.3955856760365774,
+      "hawk_dove_C": 0.07732007142852258,
+      "police_density": 0.22575539939587871
+    }
+  },
+  "std_fighting": {
+    "label": "SD fighting fans",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.19029079533793128,
+      "fight_threshold": 0.46884925959560686,
+      "hawk_dove_C": 0.16878436969214983,
+      "police_density": 0.19588124741787907
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.1658250574103342,
+      "fight_threshold": 0.33039123116272123,
+      "hawk_dove_C": 0.3703225275846791,
+      "police_density": 0.1826718491596492
+    }
+  },
+  "peak_fighting": {
+    "label": "Peak fighting fans",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.06557086741219767,
+      "fight_threshold": 0.8304501746629732,
+      "hawk_dove_C": 0.030434522207615552,
+      "police_density": 0.010892759489296184
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.1708448267953084,
+      "fight_threshold": 0.38717290543138466,
+      "hawk_dove_C": 0.038588831935678594,
+      "police_density": 0.22391639618375356
+    }
+  },
+  "mean_fighting_fraction": {
+    "label": "Mean fighting fraction",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.09771932509755472,
+      "fight_threshold": 0.8192467803078214,
+      "hawk_dove_C": 0.05303531158561476,
+      "police_density": 0.0067986348084190604
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.208965820977493,
+      "fight_threshold": 0.3955856760365774,
+      "hawk_dove_C": 0.07732007142852261,
+      "police_density": 0.2257553993958787
+    }
+  },
+  "arrests_measurement": {
+    "label": "Arrests in measurement period",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.0036205700000600275,
+      "fight_threshold": 0.44968213350622815,
+      "hawk_dove_C": 0.013664456303640455,
+      "police_density": 0.04675192356063503
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.11731974117210887,
+      "fight_threshold": 0.17377281624026178,
+      "hawk_dove_C": 0.03945005598138627,
+      "police_density": 0.16848325364932348
+    }
+  },
+  "mean_arrests_per_step": {
+    "label": "Mean arrests per step",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.0036205700000600523,
+      "fight_threshold": 0.44968213350622804,
+      "hawk_dove_C": 0.013664456303640458,
+      "police_density": 0.04675192356063503
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.11731974117210892,
+      "fight_threshold": 0.17377281624026178,
+      "hawk_dove_C": 0.039450055981386276,
+      "police_density": 0.1684832536493235
+    }
+  },
+  "mean_spatial_entropy_local": {
+    "label": "Mean local spatial entropy",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.5287445161508701,
+      "fight_threshold": -0.16385635640447016,
+      "hawk_dove_C": -0.08349538169715295,
+      "police_density": -0.009151316853038488
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.2943217891317322,
+      "fight_threshold": 0.14116716366397525,
+      "hawk_dove_C": 0.17991584196698743,
+      "police_density": 0.09386578094722663
+    }
+  },
+  "mean_similarity": {
+    "label": "Mean similarity",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.6877711555962093,
+      "fight_threshold": -0.07904708746245549,
+      "hawk_dove_C": -0.05682878502536643,
+      "police_density": 0.026654470585040703
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.31137573823571046,
+      "fight_threshold": 0.09618084131046396,
+      "hawk_dove_C": 0.13763453369766557,
+      "police_density": 0.10787258095722221
+    }
+  },
+  "mean_happy_fraction": {
+    "label": "Mean happy fraction",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.972838561314385,
+      "fight_threshold": -0.011883107047492883,
+      "hawk_dove_C": -0.005085911563307356,
+      "police_density": 0.0047843822786000885
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.41986702617960825,
+      "fight_threshold": 0.03433069003653786,
+      "hawk_dove_C": 0.012828615928134068,
+      "police_density": 0.02678990936685835
+    }
+  },
+  "mean_win_probability": {
+    "label": "Mean perceived win probability",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": 0.5933529086567587,
+      "fight_threshold": -0.144554305832017,
+      "hawk_dove_C": -0.07754097281081622,
+      "police_density": 0.010265734511388024
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.2992798053647656,
+      "fight_threshold": 0.13499763594687,
+      "hawk_dove_C": 0.17604031654382152,
+      "police_density": 0.09857622631952478
+    }
+  },
+  "mean_arrest_probability": {
+    "label": "Mean perceived arrest probability",
+    "base_sample_size": 32,
+    "total_runs": 192,
+    "S1": {
+      "similarity_threshold": -0.0003813212599089754,
+      "fight_threshold": -0.005685211581258004,
+      "hawk_dove_C": 0.011163204914120534,
+      "police_density": 0.9812520708706669
+    },
+    "S1_conf": {
+      "similarity_threshold": 0.02622989972509738,
+      "fight_threshold": 0.024382535272421353,
+      "hawk_dove_C": 0.01606409998705948,
+      "police_density": 0.4246993701108943
+    }
+  }
+}
