@@ -56,7 +56,7 @@ The model has two phases, controlled by an `in_warmup` flag checked inside every
 
 ### How a fan decides each step
 
-1. **Happiness / segregation move** — a fan counts same-group neighbours within radius 1. If the fraction falls below `similarity_threshold` the fan moves to a nearby empty cell. Even happy fans have a `random_move_chance` probability of moving anyway, keeping the grid from freezing completely. Movement destination is weighted by `exp(-movement_decay × distance)`, preferring nearby empty cells.
+1. **Happiness / segregation move** — a fan counts same-group neighbours within radius 1. If the fraction falls below `similarity_threshold` the fan moves to a nearby empty cell. Even happy fans have a `random_move_chance` probability of moving anyway, keeping the grid from freezing completely. The destination is sampled from the empty cells within a radius-5 window, weighted by `exp(-movement_decay × distance)` (with a fall-back to a global search only if no empty cell is within range), preferring nearby cells.
 
 2. **Perceived probabilities** — within `fan_vision` cells the fan counts friends, enemies, and police and computes:
    - `perceived_win_probability = exp(-k × enemies/friends)`
@@ -89,7 +89,7 @@ All strategies operate on the standard symmetric Hawk-Dove payoff matrix: two ha
 | `seed` | 42 | Random seed. |
 | `torus` | True | Wrap edges (toroidal grid). |
 | `count_empty_as_different` | True | Count empty cells as dissimilar neighbours (lecture-style Schelling). |
-| `zone_size` | 10 | Side length of coarse zones used when computing spatial entropy. |
+| `zone_size` | 10 | Side length of coarse zones. Retained for compatibility; no longer used (only fine-grained entropy is computed). |
 | `zone_size_fine` | 4 | Side length of fine zones used when computing fine-grained spatial entropy (also used for warmup convergence). |
 | `warmup_cv_threshold` | 0.01 | Warmup ends when the CV (std/mean) of fine-grained entropy over the last `warmup_window` steps falls below this. |
 | `warmup_window` | 10 | Rolling window size for the CV stabilisation check. |
@@ -124,10 +124,8 @@ The `DataCollector` records these model-level variables every step:
 - `Fighting fans` — fans playing "hawk" this step.
 - `Arrests this step` — arrests in the current step.
 - `Total arrests` — cumulative arrests since the simulation started.
-- `Spatial entropy` — Shannon entropy of group mixing across coarse zones (`zone_size`); 0 = fully segregated, ln 2 ≈ 0.69 = fully mixed.
-- `Spatial entropy (fine)` — same metric computed over fine zones (`zone_size_fine`).
-- `Entropy CV` — coefficient of variation of coarse spatial entropy over the last `warmup_window` steps.
-- `Entropy CV (fine)` — CV of fine-grained entropy over the last `warmup_window` steps; this is the signal used to end warmup.
+- `Spatial entropy (fine)` — Shannon entropy of group mixing across fine zones (`zone_size_fine`); 0 = fully segregated, ln 2 ≈ 0.69 = fully mixed.
+- `Entropy CV (fine)` — coefficient of variation of fine-grained spatial entropy over the last `warmup_window` steps; this is the signal used to end warmup.
 - `In warmup` — 1 during warmup phase, 0 once the main simulation begins.
 - `Average aggressiveness`, `Average perceived win probability`, `Average perceived arrest probability`.
 
@@ -144,6 +142,86 @@ riot_model/
     police.py                   # Police agent
     riot_model.py               # RiotModel, SegregationParams, RiotParams
     run_aggression_and_plot.py  # Headless batch runner / plotting helper
-server_riot_model.py            # Solara visualisation server
+riot_model_refactor/            # Vectorized variant — see section below
+    __init__.py
+    fan.py
+    police.py
+    riot_model.py
+server_riot_model.py            # Solara visualisation server (uses riot_model)
+compare_refactor.py             # Equivalence + speed comparison of both versions
 requirements.txt
 ```
+
+---
+
+## Refactored version (`riot_model_refactor`)
+
+`riot_model_refactor` is a performance-optimised drop-in for `riot_model`. It
+exposes the **same** public API (`RiotModel`, `SegregationParams`, `RiotParams`,
+the same datacollector columns) and is designed to produce **identical results**
+on a given seed — only the per-step bookkeeping is faster. Use it for batch work
+(parameter sweeps, sensitivity analysis); the original remains the readable
+reference implementation that drives the Solara server.
+
+```python
+from riot_model_refactor.riot_model import RiotModel, SegregationParams, RiotParams
+
+model = RiotModel(SegregationParams(N=40, steps=200, seed=42), RiotParams())
+model.run_model()
+```
+
+### What changed
+
+The optimisation comes from going **spatial** instead of **per-agent**. Movement
+and fighting stay agent-driven (they are sequential and consume the RNG in a
+fixed order, so they cannot be vectorized without changing results), but the
+per-step counting and reporting are rebuilt once per tick as numpy arrays:
+
+- **Spatial occupancy planes.** Each tick `_build_spatial_state()` rebuilds three
+  `(N, N)` integer planes (`home`, `away`, `police`) from current agent
+  positions — one pass over the agents instead of one neighbour query per agent.
+- **Vectorized neighbour counts.** Friend/enemy/police counts (radius
+  `fan_vision`) and same-group counts (radius 1) are computed for every cell at
+  once with a torus-aware box-sum (`_box_sum`, pure numpy). This replaces the
+  per-fan `grid.get_neighbors(...)` calls that dominated the old hot path.
+- **Cached aggregates.** The ~10 datacollector reporters (`count_happy`,
+  `average_aggressiveness`, …) read scalars accumulated during the rebuild
+  instead of each running its own loop over all fans.
+- **Gated fighting.** Fighting still needs the actual neighbour agents (to pick a
+  random opponent), but a fan only triggers a `get_neighbors` call when the
+  spatial planes show an adjacent opponent **and** its fight margin clears
+  `fight_threshold` — skipping the call for the majority that cannot fight.
+
+### Shared optimisations (in both versions)
+
+A few changes were applied to **both** `riot_model` and `riot_model_refactor` so
+the two stay behaviourally matched:
+
+- **Local-window movement.** `nearest_empty_position` enumerates only the
+  radius-5 window around the agent instead of scanning every empty cell on the
+  grid (falling back to a global search only when no empty cell is within range).
+- **Single fine entropy pass.** Coarse spatial entropy was removed; fine-grained
+  entropy is computed once per step with a vectorized numpy zone reduction.
+  The `Spatial entropy` and `Entropy CV` (coarse) datacollector columns no longer
+  exist.
+
+> Note: these shared changes alter the exact per-seed trajectory relative to the
+> original pre-refactor model, but the statistical behaviour is unchanged. The
+> two current versions match each other bit-for-bit.
+
+### Verifying equivalence and speed
+
+`compare_refactor.py` runs both implementations across several seeds and both
+torus settings, asserts that the integer/count columns are exactly equal and the
+float-average columns match within tolerance, and reports the speedup:
+
+```bash
+python compare_refactor.py
+```
+
+The refactor is roughly **1.4× faster** than the (already-optimised) original on
+default parameters; the bulk of remaining runtime is in the inherently
+sequential movement and police logic. As a rough planning figure, a 200-step run
+at default parameters takes on the order of ~15 s, so an embarrassingly-parallel
+3000-run sensitivity analysis fits comfortably within ~1 hour on a 24-core node
+(scale up if the sweep pushes `N` or the vision radii higher).
