@@ -45,7 +45,7 @@ class Config:
     aggressiveness_mean: float | None = None
     aggressiveness_concentration: float = 12.0
 
-    output_dir: str = "data/parameter_experiment1"
+    output_dir: str = "./"
 
 
 CFG = Config()
