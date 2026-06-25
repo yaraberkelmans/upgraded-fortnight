@@ -98,7 +98,7 @@ class Police:
         empty_positions = list(self.model.grid.empties)
         if empty_positions:
             new_pos = self.model.random.choice(empty_positions)
-            group = FanGroup.HOME if self.model.random.random() < 0.5 else FanGroup.AWAY
+            group = FanGroup.HOME if self.model.random.random() < self.model.segregation_params.home_fraction else FanGroup.AWAY
             new_fan = Fan(self.model, group)
             self.model.fans.append(new_fan)
             self.model.grid.place_agent(new_fan, new_pos)

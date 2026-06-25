@@ -62,7 +62,7 @@ class SegregationParams:
     count_empty_as_different: bool = True
     zone_size: int = 10
     zone_size_fine: int = 4
-    warmup_cv_threshold: float = 0.01
+    warmup_cv_threshold: float = 0.05
     warmup_window: int = 10
     random_move_chance: float = 0.005
 
@@ -123,8 +123,8 @@ class RiotModel(Model):
             self.riot_params = riot_params
 
         self.random = random.Random(self.segregation_params.seed)
-        self.home_aggressiveness_ratio = self.segregation_params.home_fraction
-        self.away_aggressiveness_ratio = 1.0 - self.segregation_params.home_fraction
+        self.home_aggressiveness_ratio = 1.0 - self.segregation_params.home_fraction
+        self.away_aggressiveness_ratio = self.segregation_params.home_fraction
 
         self.grid = SingleGrid(
             width=self.segregation_params.N,
