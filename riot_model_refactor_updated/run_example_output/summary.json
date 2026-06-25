@@ -1,0 +1,10 @@
+{
+  "mean_fighting": 365.31,
+  "std_fighting": 27.460406042154585,
+  "peak_fighting": 461.0,
+  "mean_fighting_fraction": 0.28539843750000005,
+  "arrests_measurement": 5616.0,
+  "mean_spatial_entropy": 0.5720405155420303,
+  "mean_spatial_entropy_local": 0.30791734046936026,
+  "mean_similarity": 0.748650390625
+}

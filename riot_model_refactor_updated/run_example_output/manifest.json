@@ -1,0 +1,16 @@
+{
+  "array": "run_example_output\\system_state_100_steps.npy",
+  "summary": "run_example_output\\summary.json",
+  "parameters": "run_example_output\\parameters.json",
+  "timings": "run_example_output\\timings.json",
+  "plots": [
+    "run_example_output\\plots\\01_population.png",
+    "run_example_output\\plots\\02_fan_states.png",
+    "run_example_output\\plots\\03_activity.png",
+    "run_example_output\\plots\\04_total_arrests.png",
+    "run_example_output\\plots\\05_spatial_metrics.png",
+    "run_example_output\\plots\\06_behaviour_probabilities.png",
+    "run_example_output\\plots\\07_fractions.png",
+    "run_example_output\\plots\\08_move_distance.png"
+  ]
+}
