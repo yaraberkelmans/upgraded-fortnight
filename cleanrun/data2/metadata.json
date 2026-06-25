@@ -1,0 +1,71 @@
+{
+  "problem": {
+    "num_vars": 4,
+    "names": [
+      "similarity_threshold",
+      "fight_threshold",
+      "hawk_dove_C",
+      "police_density"
+    ],
+    "bounds": [
+      [
+        0.05,
+        0.9
+      ],
+      [
+        -0.35,
+        0.45
+      ],
+      [
+        0.1,
+        19.0
+      ],
+      [
+        0.01,
+        0.15
+      ]
+    ],
+    "sample_scaled": true
+  },
+  "base_n": 128,
+  "model_runs": 768,
+  "fixed_seed": 43,
+  "fixed_parameters": {
+    "home_fraction": 0.5,
+    "hawk_dove_strategy": "logit_qre",
+    "logit_beta": 5.0,
+    "agent_density": 0.8,
+    "grid_N": 40
+  },
+  "spatial_warmup": {
+    "fine_entropy_cv_threshold": 0.025,
+    "window": 10,
+    "maximum_steps": 2000
+  },
+  "riot_burn_in_steps": 100,
+  "measurement_steps": 100,
+  "workers": 8,
+  "per_run_files": {
+    "directory": "runs",
+    "pattern": "run_XXXX.npy",
+    "records_per_file": 100,
+    "dtype_fields": [
+      "step",
+      "fighting",
+      "home",
+      "away",
+      "police",
+      "happy",
+      "unhappy",
+      "moves",
+      "arrests_step",
+      "measurement_total_arrests",
+      "spatial_entropy_local",
+      "average_similarity",
+      "happy_fraction",
+      "fighting_fraction",
+      "average_win_probability",
+      "average_arrest_probability"
+    ]
+  }
+}
