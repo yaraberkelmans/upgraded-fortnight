@@ -1,0 +1,35 @@
+{
+  "segregation_params": {
+    "N": 40,
+    "agent_density": 0.8,
+    "home_fraction": 0.5,
+    "similarity_threshold": 0.3,
+    "movement_decay": 1.0,
+    "steps": 100,
+    "seed": 42,
+    "torus": true,
+    "count_empty_as_different": true,
+    "zone_size": 10,
+    "zone_size_fine": 4,
+    "warmup_cv_threshold": 0.01,
+    "warmup_window": 10,
+    "random_move_chance": 0.005,
+    "collect_data": false
+  },
+  "riot_params": {
+    "police_density": 0.05,
+    "perception_k": 0.693,
+    "fan_vision": 2,
+    "fight_threshold": 0.0,
+    "police_vision": 5,
+    "logit_beta": 5.0,
+    "hawk_dove_strategy": "logit_prior",
+    "hawk_dove_C": 4.0,
+    "aggressiveness_mean": null,
+    "aggressiveness_concentration": 12.0,
+    "fighting_enabled": true
+  },
+  "riot_burn_in_steps": 100,
+  "measurement_steps": 100,
+  "max_spatial_warmup_steps": 2000
+}

@@ -1,0 +1,14 @@
+{
+  "initialization_seconds": 0.014661699999123812,
+  "spatial_warmup_seconds": 0.18997279996983707,
+  "spatial_warmup_steps": 19,
+  "final_spatial_entropy_cv": 0.009516183923796112,
+  "riot_burn_in_seconds": 1.9950779000064358,
+  "riot_burn_in_steps": 100,
+  "measurement_seconds": 1.9283267999999225,
+  "measurement_steps": 100,
+  "mean_measurement_step_seconds": 0.019283267999999226,
+  "saving_and_plotting_seconds": 3.3130000999663025,
+  "plotting_seconds": 3.3089640000252984,
+  "total_seconds": 7.4411289999843575
+}

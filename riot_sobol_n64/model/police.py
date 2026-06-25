@@ -2,7 +2,7 @@
 
 import math
 try:
-    from riot_model_refactor.fan import Fan, FanGroup
+    from model.fan import Fan, FanGroup
 except ImportError:
     from fan import Fan, FanGroup
 

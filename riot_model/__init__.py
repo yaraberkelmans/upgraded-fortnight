@@ -1,1 +1,0 @@
-"""riot_model package."""
