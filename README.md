@@ -18,7 +18,7 @@ Make a venv. We recommend using Python 3.12.10 or higher.
 ```bash
 pip install -r requirements.txt
 ```
-You're all setup!
+You're all setup! BTW: in the rubric it says we need to list the packages. Please read the requirements.txt if you want to see it.
 
 ## File Structure 
 

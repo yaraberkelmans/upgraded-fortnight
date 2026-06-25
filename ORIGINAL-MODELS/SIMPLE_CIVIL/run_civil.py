@@ -53,7 +53,9 @@ def plot_results(results):
 
 
 def plot_risk_results(results):
-    ax = results[["Average grievance", "Average arrest probability", "Average net risk"]].plot(figsize=(10, 5))
+    ax = results[
+        ["Average grievance", "Average arrest probability", "Average net risk"]
+    ].plot(figsize=(10, 5))
     ax.set_title("Average grievance, arrest probability and net risk")
     ax.set_xlabel("Step")
     ax.set_ylabel("Average value")
@@ -115,8 +117,14 @@ def main():
     df_low_legitimacy = run_legitimacy_experiment(legitimacy=0.65, steps=200, seed=42)
 
     plt.figure(figsize=(10, 5))
-    plt.plot(df_high_legitimacy.index, df_high_legitimacy["Active"], label="Legitimacy = 0.85")
-    plt.plot(df_low_legitimacy.index, df_low_legitimacy["Active"], label="Legitimacy = 0.65")
+    plt.plot(
+        df_high_legitimacy.index,
+        df_high_legitimacy["Active"],
+        label="Legitimacy = 0.85",
+    )
+    plt.plot(
+        df_low_legitimacy.index, df_low_legitimacy["Active"], label="Legitimacy = 0.65"
+    )
     plt.title("Effect van legitimacy op active citizens")
     plt.xlabel("Step")
     plt.ylabel("Number of active citizens")

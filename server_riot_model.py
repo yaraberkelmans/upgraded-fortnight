@@ -9,6 +9,7 @@ from mesa.visualization import SolaraViz, SpaceRenderer, make_plot_component
 from mesa.visualization.components import AgentPortrayalStyle
 
 from RIOT_MODEL.riot_model import Fan, FanGroup, HawkDoveStrategy, Police, RiotModel
+
 STATE_COLORS = {
     FanGroup.HOME: "#2f80ed",
     FanGroup.AWAY: "#f2c94c",
@@ -37,7 +38,9 @@ def post_process(ax):
 
 
 initial_model = RiotModel()
-renderer = SpaceRenderer(initial_model, backend="matplotlib").setup_agents(agent_portrayal)
+renderer = SpaceRenderer(initial_model, backend="matplotlib").setup_agents(
+    agent_portrayal
+)
 renderer.draw_agents()
 renderer.post_process = post_process
 
@@ -91,36 +94,165 @@ perception_chart = make_plot_component(
 
 
 model_params = {
-    "N": {"type": "SliderInt", "value": 40, "min": 10, "max": 120, "step": 1, "label": "Grid size"},
-    "agent_density": {"type": "SliderFloat", "value": 0.80, "min": 0.0, "max": 1.0, "step": 0.01, "label": "Agent density"},
-    "police_density": {"type": "SliderFloat", "value": 0.05, "min": 0.0, "max": 1.0, "step": 0.01, "label": "Police density"},
-    "home_fraction": {"type": "SliderFloat", "value": 0.50, "min": 0.0, "max": 1.0, "step": 0.01, "label": "Home fraction"},
-    "similarity_threshold": {"type": "SliderFloat", "value": 0.30, "min": 0.0, "max": 1.0, "step": 0.01, "label": "Similarity threshold"},
-    "fan_vision": {"type": "SliderInt", "value": 2, "min": 1, "max": 20, "step": 1, "label": "Fan vision"},
-    "perception_k": {"type": "SliderFloat", "value": 0.693, "min": 0.0, "max": 5.0, "step": 0.01, "label": "Perception k"},
-    "fight_threshold": {"type": "SliderFloat", "value": 0.0, "min": -1.0, "max": 1.0, "step": 0.01, "label": "Fight threshold"},
-    "police_vision": {"type": "SliderInt", "value": 5, "min": 1, "max": 20, "step": 1, "label": "Police vision"},
+    "N": {
+        "type": "SliderInt",
+        "value": 40,
+        "min": 10,
+        "max": 120,
+        "step": 1,
+        "label": "Grid size",
+    },
+    "agent_density": {
+        "type": "SliderFloat",
+        "value": 0.80,
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.01,
+        "label": "Agent density",
+    },
+    "police_density": {
+        "type": "SliderFloat",
+        "value": 0.05,
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.01,
+        "label": "Police density",
+    },
+    "home_fraction": {
+        "type": "SliderFloat",
+        "value": 0.50,
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.01,
+        "label": "Home fraction",
+    },
+    "similarity_threshold": {
+        "type": "SliderFloat",
+        "value": 0.30,
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.01,
+        "label": "Similarity threshold",
+    },
+    "fan_vision": {
+        "type": "SliderInt",
+        "value": 2,
+        "min": 1,
+        "max": 20,
+        "step": 1,
+        "label": "Fan vision",
+    },
+    "perception_k": {
+        "type": "SliderFloat",
+        "value": 0.693,
+        "min": 0.0,
+        "max": 5.0,
+        "step": 0.01,
+        "label": "Perception k",
+    },
+    "fight_threshold": {
+        "type": "SliderFloat",
+        "value": 0.0,
+        "min": -1.0,
+        "max": 1.0,
+        "step": 0.01,
+        "label": "Fight threshold",
+    },
+    "police_vision": {
+        "type": "SliderInt",
+        "value": 5,
+        "min": 1,
+        "max": 20,
+        "step": 1,
+        "label": "Police vision",
+    },
     "hawk_dove_strategy": {
         "type": "Select",
         "value": "logit_qre",
         "values": [s.value for s in HawkDoveStrategy],
         "label": "Hawk-Dove strategy",
     },
-    "hawk_dove_C": {"type": "SliderFloat", "value": 4.0, "min": 0.1, "max": 10.0, "step": 0.1, "label": "Hawk-Dove C (injury cost)"}, "logit_beta": {"type": "SliderFloat", "value": 5.0, "min": 0.1, "max": 20.0, "step": 0.1, "label": "Logit beta (rationality)"},
-    "movement_decay": {"type": "SliderFloat", "value": 1.00, "min": 0.01, "max": 5.0, "step": 0.01, "label": "Movement decay"},
-    "steps": {"type": "SliderInt", "value": 100, "min": 1, "max": 2000, "step": 1, "label": "Steps"},
-    "seed": {"type": "SliderInt", "value": 42, "min": 0, "max": 100000, "step": 1, "label": "Seed"},
+    "hawk_dove_C": {
+        "type": "SliderFloat",
+        "value": 4.0,
+        "min": 0.1,
+        "max": 10.0,
+        "step": 0.1,
+        "label": "Hawk-Dove C (injury cost)",
+    },
+    "logit_beta": {
+        "type": "SliderFloat",
+        "value": 5.0,
+        "min": 0.1,
+        "max": 20.0,
+        "step": 0.1,
+        "label": "Logit beta (rationality)",
+    },
+    "movement_decay": {
+        "type": "SliderFloat",
+        "value": 1.00,
+        "min": 0.01,
+        "max": 5.0,
+        "step": 0.01,
+        "label": "Movement decay",
+    },
+    "steps": {
+        "type": "SliderInt",
+        "value": 100,
+        "min": 1,
+        "max": 2000,
+        "step": 1,
+        "label": "Steps",
+    },
+    "seed": {
+        "type": "SliderInt",
+        "value": 42,
+        "min": 0,
+        "max": 100000,
+        "step": 1,
+        "label": "Seed",
+    },
     "torus": {"type": "Checkbox", "value": True, "label": "Torus"},
-    "count_empty_as_different": {"type": "Checkbox", "value": True, "label": "Count empty as different"},
-    "random_move_chance": {"type": "SliderFloat", "value": 0.005, "min": 0.001, "max": 0.15, "step": 0.001, "label": "Random move chance"},
-    "warmup_cv_threshold": {"type": "SliderFloat", "value": 0.01, "min": 0.001, "max": 0.1, "step": 0.001, "label": "Warmup CV threshold"},
-    "fighting_enabled": {"type": "Checkbox", "value": True, "label": "Fighting enabled"},
+    "count_empty_as_different": {
+        "type": "Checkbox",
+        "value": True,
+        "label": "Count empty as different",
+    },
+    "random_move_chance": {
+        "type": "SliderFloat",
+        "value": 0.005,
+        "min": 0.001,
+        "max": 0.15,
+        "step": 0.001,
+        "label": "Random move chance",
+    },
+    "warmup_cv_threshold": {
+        "type": "SliderFloat",
+        "value": 0.01,
+        "min": 0.001,
+        "max": 0.1,
+        "step": 0.001,
+        "label": "Warmup CV threshold",
+    },
+    "fighting_enabled": {
+        "type": "Checkbox",
+        "value": True,
+        "label": "Fighting enabled",
+    },
 }
 
 page = SolaraViz(
     initial_model,
     renderer,
-    components=[chart_component, arrest_chart, movement_chart, aggressiveness_chart, perception_chart, entropy_chart, entropy_cv_chart],
+    components=[
+        chart_component,
+        arrest_chart,
+        movement_chart,
+        aggressiveness_chart,
+        perception_chart,
+        entropy_chart,
+        entropy_cv_chart,
+    ],
     model_params=model_params,
     name="Mix Start Fan Model",
 )
