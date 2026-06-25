@@ -1,0 +1,68 @@
+{
+  "problem": {
+    "num_vars": 4,
+    "names": [
+      "similarity_threshold",
+      "fight_threshold",
+      "hawk_dove_C",
+      "police_density"
+    ],
+    "bounds": [
+      [
+        0.05,
+        0.9
+      ],
+      [
+        -0.35,
+        0.45
+      ],
+      [
+        0.1,
+        19.0
+      ],
+      [
+        0.01,
+        0.15
+      ]
+    ],
+    "sample_scaled": true
+  },
+  "base_n": 512,
+  "model_runs": 3072,
+  "model_seed": 46,
+  "sobol_sampling_seed": 2026,
+  "fixed_parameters": {
+    "home_fraction": 0.5,
+    "hawk_dove_strategy": "logit_prior",
+    "logit_beta": 5.0,
+    "agent_density": 0.6,
+    "grid_N": 40
+  },
+  "spatial_warmup": {
+    "fine_entropy_cv_threshold": 0.025,
+    "window": 10,
+    "maximum_steps": 2000
+  },
+  "riot_burn_in_steps": 100,
+  "measurement_steps": 100,
+  "workers": 128,
+  "per_run_files": {
+    "measurement": "runs/run_XXXX.npy",
+    "arrests": "arrests/arrests_XXXX.npy",
+    "overview": "overview/overview_XXXX.npy",
+    "arrest_fields": [
+      "step",
+      "is_respawn",
+      "aggressiveness",
+      "is_home"
+    ],
+    "overview_fields": [
+      "run_id",
+      "valid",
+      "warmup_steps",
+      "warmup_entropy",
+      "start_measurement_entropy",
+      "end_measurement_entropy"
+    ]
+  }
+}

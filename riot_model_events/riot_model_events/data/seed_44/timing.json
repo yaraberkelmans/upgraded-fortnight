@@ -1,0 +1,8 @@
+{
+  "wall_seconds": 348.0587270980468,
+  "mean_run_seconds": 13.902036441549816,
+  "median_run_seconds": 14.407364902028348,
+  "max_run_seconds": 25.047286432003602,
+  "valid_runs": 3072,
+  "invalid_runs": 0
+}
