@@ -45,7 +45,7 @@ PROBLEM = {
 }
 
 DEFAULT_BASE_N = 32
-FIXED_SEED = 43
+DEFAULT_MODEL_SEED = 43
 RIOT_BURN_IN_STEPS = 100
 MEASUREMENT_STEPS = 100
 MAX_SPATIAL_WARMUP_STEPS = 2_000
@@ -140,6 +140,7 @@ def _save_overview(
 def _failed(
     sample_id: int,
     values: tuple[float, ...],
+    model_seed: int,
     warmup_steps: int,
     started: float,
     code: str,
@@ -147,7 +148,7 @@ def _failed(
     similarity_threshold, fight_threshold, hawk_dove_C, police_density = values
     nan = float("nan")
     return (
-        sample_id, False, code, FIXED_SEED,
+        sample_id, False, code, model_seed,
         float(similarity_threshold), float(fight_threshold),
         float(hawk_dove_C), float(police_density),
         warmup_steps, time.perf_counter() - started,
@@ -155,8 +156,8 @@ def _failed(
     )
 
 
-def run_one(job: tuple[int, tuple[float, ...], str]) -> tuple:
-    sample_id, values, output_dir_str = job
+def run_one(job: tuple[int, tuple[float, ...], str, int]) -> tuple:
+    sample_id, values, output_dir_str, model_seed = job
     output_dir = Path(output_dir_str)
     run_dir = output_dir / "runs"
     arrest_dir = output_dir / "arrests"
@@ -172,7 +173,7 @@ def run_one(job: tuple[int, tuple[float, ...], str]) -> tuple:
         home_fraction=0.50,
         similarity_threshold=float(similarity_threshold),
         movement_decay=1.0,
-        seed=FIXED_SEED,
+        seed=model_seed,
         torus=True,
         count_empty_as_different=True,
         zone_size=10,
@@ -189,7 +190,7 @@ def run_one(job: tuple[int, tuple[float, ...], str]) -> tuple:
         fight_threshold=float(fight_threshold),
         police_vision=5,
         logit_beta=5.0,
-        hawk_dove_strategy="logit_qre",
+        hawk_dove_strategy="logit_prior",
         hawk_dove_C=float(hawk_dove_C),
         aggressiveness_mean=None,
         aggressiveness_concentration=12.0,
@@ -200,7 +201,7 @@ def run_one(job: tuple[int, tuple[float, ...], str]) -> tuple:
         model = RiotModel(segregation_params=segregation, riot_params=riot)
     except Exception as exc:
         _save_overview(overview_dir, sample_id, False, 0, nan, nan, nan)
-        return _failed(sample_id, values, 0, started, f"init:{type(exc).__name__}")
+        return _failed(sample_id, values, model_seed, 0, started, f"init:{type(exc).__name__}")
 
     warmup_steps = 0
     try:
@@ -214,7 +215,7 @@ def run_one(job: tuple[int, tuple[float, ...], str]) -> tuple:
             warmup_entropy, nan, nan,
         )
         return _failed(
-            sample_id, values, warmup_steps, started,
+            sample_id, values, model_seed, warmup_steps, started,
             f"warmup:{type(exc).__name__}",
         )
 
@@ -225,7 +226,7 @@ def run_one(job: tuple[int, tuple[float, ...], str]) -> tuple:
             warmup_entropy, nan, nan,
         )
         return _failed(
-            sample_id, values, warmup_steps, started,
+            sample_id, values, model_seed, warmup_steps, started,
             "warmup_not_converged",
         )
 
@@ -309,7 +310,7 @@ def run_one(job: tuple[int, tuple[float, ...], str]) -> tuple:
             nan,
         )
         return _failed(
-            sample_id, values, warmup_steps, started,
+            sample_id, values, model_seed, warmup_steps, started,
             f"riot:{type(exc).__name__}",
         )
 
@@ -323,7 +324,7 @@ def run_one(job: tuple[int, tuple[float, ...], str]) -> tuple:
     n_fans = max(len(model.fans), 1)
 
     return (
-        sample_id, True, "", FIXED_SEED,
+        sample_id, True, "", model_seed,
         float(similarity_threshold), float(fight_threshold),
         float(hawk_dove_C), float(police_density),
         warmup_steps, time.perf_counter() - started,
@@ -349,6 +350,15 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_BASE_N,
         help="Sobol base sample size; total runs = base_n * 6.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=DEFAULT_MODEL_SEED,
+        help=(
+            "Random seed used by every model run. The Sobol parameter sample "
+            "remains fixed (sampling seed 2026)."
+        ),
     )
     return parser.parse_args()
 
@@ -395,7 +405,7 @@ def main() -> None:
         raise RuntimeError(f"Unexpected Sobol sample shape: {samples.shape}")
 
     jobs = [
-        (i, tuple(map(float, row)), str(args.output_dir))
+        (i, tuple(map(float, row)), str(args.output_dir), args.seed)
         for i, row in enumerate(samples)
     ]
     np.save(args.output_dir / "sobol_samples.npy", samples, allow_pickle=False)
@@ -404,10 +414,11 @@ def main() -> None:
         "problem": PROBLEM,
         "base_n": args.base_n,
         "model_runs": len(jobs),
-        "fixed_seed": FIXED_SEED,
+        "model_seed": args.seed,
+        "sobol_sampling_seed": 2026,
         "fixed_parameters": {
             "home_fraction": 0.5,
-            "hawk_dove_strategy": "logit_qre",
+            "hawk_dove_strategy": "logit_prior",
             "logit_beta": 5.0,
             "agent_density": 0.6,
             "grid_N": 40,
@@ -433,7 +444,10 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print(f"Starting {len(jobs)} runs with {args.workers} workers")
+    print(
+        f"Starting {len(jobs)} runs with {args.workers} workers "
+        f"and model seed {args.seed}"
+    )
     started = time.perf_counter()
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         raw = list(pool.map(run_one, jobs, chunksize=1))
