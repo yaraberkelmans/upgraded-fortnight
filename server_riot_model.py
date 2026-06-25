@@ -8,7 +8,7 @@ import solara
 from mesa.visualization import SolaraViz, SpaceRenderer, make_plot_component
 from mesa.visualization.components import AgentPortrayalStyle
 
-from riot_model.riot_model import Fan, FanGroup, HawkDoveStrategy, Police, RiotModel
+from RIOT_MODEL.riot_model import Fan, FanGroup, HawkDoveStrategy, Police, RiotModel
 STATE_COLORS = {
     FanGroup.HOME: "#2f80ed",
     FanGroup.AWAY: "#f2c94c",

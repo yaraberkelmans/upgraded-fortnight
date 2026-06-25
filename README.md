@@ -1,149 +1,53 @@
 # ABM - Group 5
-Agent Based Modelling assignment — a spatial simulation of football fan segregation and riot dynamics built on [Mesa](https://mesa.readthedocs.io/).
+## Yara, Max, Mark and Ruben
+
+In this repository, we present the code and project report for the research we conducted into football riots. Based on the research question of which method works best to mitigate football riots, we developed a model based on the original Schelling and Epstein models. We also added a logit-based game to the model.
+
+This README explains the file structure and how to run the simulations.
+
+This project was carried out for the Agent-Based Modelling course at the University of Amsterdam in 2026.
+
 
 ---
 
-## Getting started
+## How to run it.
+### Step 1. Setup Venv
 
-### Install dependencies
+Make a venv. We recommend using Python 3.12.10 or higher.
+
+### Step 2. Download the dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
+You're all setup!
 
-### Run the interactive visualisation
+## File Structure 
+
+Folders:
+- ORIGIINAL_MODELS: Legacy code for Schelling and Epstein model. Also contains the code to run the servers.
+- RIOT_MODEL: First version of our riot-model. It's not vectorized so a bit slow but with the server you can see some nice simulations!
+- SNELLIUS_FILES: Contains the files needed to run big simulations of our model and the script to run it locally. This folder also contains a README with some more explaination how to use it. 
+
+## Run the solara interface
 
 ```bash
 solara run server_riot_model.py
 ```
 
-This opens a browser-based dashboard with a live grid, parameter sliders, and several charts.
+## Responsable AI
 
-### Run the model headlessly (no UI)
+We used AI to help us implement our ideas and further develop the model. We tried to use it as responsibly as possible by reviewing the generated code, testing the model, and critically evaluating the assumptions and results.
 
-```python
-from riot_model.riot_model import RiotModel, SegregationParams, RiotParams
+## Literature
 
-model = RiotModel(
-    segregation_params=SegregationParams(N=40, steps=200, seed=42),
-    riot_params=RiotParams(police_density=0.05, hawk_dove_strategy="logit_prior"),
-)
-model.run_model()
+1. Epstein, Joshua M. “Modeling Civil Violence: An Agent-Based Computational Approach.” Proceedings of the National Academy of Sciences 99, suppl. 3 (2002): 7243–7250.
+2. Schelling, Thomas C. “Dynamic Models of Segregation.” Journal of Mathematical Sociology 1, no. 2 (1971): 143–186.
 
-data = model.datacollector.get_model_vars_dataframe()
-print(data.tail())
-```
+## Licence
 
----
+MIT Licence
 
-## The Riot Model
+### CREDITS
 
-The model simulates two groups of football fans (home and away) moving around an N×N grid. It combines a **Schelling segregation** layer with a **Hawk-Dove** fight-decision layer and a **police** arrest layer.
-
-### Agents
-
-| Agent | Description |
-|---|---|
-| `Fan` | Moves when unhappy with its neighbourhood; decides whether to fight nearby opponents each step. |
-| `Police` | Patrols the grid; moves toward the nearest fighting fan and arrests them. |
-
-### Simulation phases
-
-The model has two phases, controlled by an `in_warmup` flag checked inside every `step()` call:
-
-1. **Warmup** — Schelling movement only, no fighting. Ends when the CV (std/mean) of fine-grained spatial entropy (`zone_size_fine`) over the last `warmup_window` steps drops below `warmup_cv_threshold`, or when no fan moved.
-2. **Main simulation** — movement and fighting both run. Starts automatically after warmup converges.
-
-### How a fan decides each step
-
-1. **Happiness / segregation move** — a fan counts same-group neighbours within radius 1. If the fraction falls below `similarity_threshold` the fan moves to a nearby empty cell. Even happy fans have a `random_move_chance` probability of moving anyway, keeping the grid from freezing completely. Movement destination is weighted by `exp(-movement_decay × distance)`, preferring nearby empty cells.
-
-2. **Perceived probabilities** — within `fan_vision` cells the fan counts friends, enemies, and police and computes:
-   - `perceived_win_probability = exp(-k × enemies/friends)`
-   - `perceived_arrest_probability = 1 − exp(-k × 5·police/total_fans)`
-
-3. **Fight decision** — `fight_want = aggressiveness × perceived_win_probability`. If `fight_want − perceived_arrest_probability > fight_threshold` the fan picks an opponent and plays a Hawk-Dove round; "hawk" means fighting.
-
-### Hawk-Dove strategies
-
-All strategies operate on the standard symmetric Hawk-Dove payoff matrix: two hawks split `(V − C)/2`; hawk vs dove gives `V` to the hawk; two doves split `V/2`. `V` is the number of same-team neighbours within `fan_vision`; `C` is `hawk_dove_C`.
-
-| Strategy | Behaviour |
-|---|---|
-| `nash_ess` | Mixed Nash / ESS: play hawk with probability `min(1, V/C)`. |
-| `logit_prior` **(default)** | Logit QRE with a uniform prior: assumes the opponent plays hawk with probability 0.5. Expected payoff difference `ΔE = V/2 − C/4`; hawk probability `1 / (1 + exp(−logit_beta × ΔE))`. |
-| `logit_qre` | Logit QRE with an empirical prior: opponent hawk probability `q` is estimated from the local enemy/friend ratio. `ΔE = V/2 − q·C/2`; hawk probability `1 / (1 + exp(−logit_beta × ΔE))`. |
-
-### Parameters
-
-#### Segregation (`SegregationParams`)
-
-| Parameter | Default | Description |
-|---|---|---|
-| `N` | 40 | Grid side length (N × N cells). |
-| `agent_density` | 0.80 | Fraction of cells occupied by fans. |
-| `home_fraction` | 0.50 | Fraction of fans that are home supporters. |
-| `similarity_threshold` | 0.30 | Minimum fraction of same-group neighbours for a fan to be "happy". |
-| `movement_decay` | 1.0 | Controls how strongly fans prefer nearby empty cells when moving. |
-| `steps` | 100 | Default number of steps for `run_model()` and max warmup steps. |
-| `seed` | 42 | Random seed. |
-| `torus` | True | Wrap edges (toroidal grid). |
-| `count_empty_as_different` | True | Count empty cells as dissimilar neighbours (lecture-style Schelling). |
-| `zone_size` | 10 | Side length of coarse zones used when computing spatial entropy. |
-| `zone_size_fine` | 4 | Side length of fine zones used when computing fine-grained spatial entropy (also used for warmup convergence). |
-| `warmup_cv_threshold` | 0.01 | Warmup ends when the CV (std/mean) of fine-grained entropy over the last `warmup_window` steps falls below this. |
-| `warmup_window` | 10 | Rolling window size for the CV stabilisation check. |
-| `random_move_chance` | 0.005 | Probability a happy fan moves anyway; prevents the grid from fully freezing. |
-
-#### Riot (`RiotParams`)
-
-| Parameter | Default | Description |
-|---|---|---|
-| `police_density` | 0.05 | Fraction of cells occupied by police. |
-| `perception_k` | 0.693 | Sensitivity constant in the win/arrest probability formulae (≈ ln 2). |
-| `fan_vision` | 2 | Chebyshev radius within which a fan perceives others. |
-| `fight_threshold` | 0.0 | Minimum value of `fight_want − P(arrest)` required to start a fight. |
-| `police_vision` | 5 | Chebyshev radius within which police can spot fighting fans. |
-| `hawk_dove_strategy` | `logit_prior` | Strategy used by all fans when playing Hawk-Dove (see table above). |
-| `hawk_dove_C` | 4.0 | Injury cost parameter used by the `nash_ess` strategy. |
-| `logit_beta` | 5.0 | Steepness of the logit hawk-probability curve; higher = sharper threshold. |
-| `aggressiveness_mean` | `None` | If set, all fans use this aggressiveness mean; if `None`, home fans use `home_fraction` and away fans use `1 − home_fraction`. |
-| `aggressiveness_concentration` | 12.0 | Concentration of the Beta distribution for aggressiveness; higher = tighter spread. |
-| `fighting_enabled` | `True` | When `False`, fans never fight and police never arrest (warmup-only mode). |
-
-### Collected metrics
-
-The `DataCollector` records these model-level variables every step:
-
-- `Happy` / `Unhappy` — number of fans at or above/below the similarity threshold.
-- `Home` / `Away` — fan counts per group.
-- `Average similarity` / `Segregation index` — mean same-fraction across all fans.
-- `Moves` — total fan moves this step.
-- `Average last move distance` / `Average last move distance (moved fans)`.
-- `Police` — number of police on the grid.
-- `Fighting fans` — fans playing "hawk" this step.
-- `Arrests this step` — arrests in the current step.
-- `Total arrests` — cumulative arrests since the simulation started.
-- `Spatial entropy` — Shannon entropy of group mixing across coarse zones (`zone_size`); 0 = fully segregated, ln 2 ≈ 0.69 = fully mixed.
-- `Spatial entropy (fine)` — same metric computed over fine zones (`zone_size_fine`).
-- `Entropy CV` — coefficient of variation of coarse spatial entropy over the last `warmup_window` steps.
-- `Entropy CV (fine)` — CV of fine-grained entropy over the last `warmup_window` steps; this is the signal used to end warmup.
-- `In warmup` — 1 during warmup phase, 0 once the main simulation begins.
-- `Average aggressiveness`, `Average perceived win probability`, `Average perceived arrest probability`.
-
-### Fan replacement on arrest
-
-When a fan is arrested the population size stays constant: a new fan of a randomly chosen group is spawned at a random empty cell. This means `Home` and `Away` counts can drift over time as arrests accumulate, but total fan count stays stable.
-
-### Project structure
-
-```
-riot_model/
-    __init__.py
-    fan.py                      # Fan agent, FanGroup, HawkDoveStrategy
-    police.py                   # Police agent
-    riot_model.py               # RiotModel, SegregationParams, RiotParams
-    run_aggression_and_plot.py  # Headless batch runner / plotting helper
-server_riot_model.py            # Solara visualisation server
-requirements.txt
-```
+Max, Yara, Mark, Ruben
