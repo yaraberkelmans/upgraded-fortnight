@@ -8,8 +8,6 @@ This README explains the file structure and how to run the simulations.
 This project was carried out for the Agent-Based Modelling course at the University of Amsterdam in 2026.
 
 
----
-
 ## How to run it.
 ### Step 1. Setup Venv
 
