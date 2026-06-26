@@ -631,4 +631,367 @@ fig9.savefig(PLOTS_DIR / "09_fighting_hawkdove_x_fightthreshold.png", dpi=150)
 plt.close(fig9)
 print("  saved: 09_fighting_hawkdove_x_fightthreshold.png")
 
+# ══════════════════════════════════════════════════════════════════════════════
+# FIGURES 10 & 11 — Fighting × Entropy relationship
+#   Fig 10: trajectory in (mean_fighting, entropy) space
+#   Fig 11: dual-axis marginal — normalized param vs fighting & entropy
+#   Both: 2 rows (entropy metric) × 3 cols (sim filter) = 6 panels each
+# ══════════════════════════════════════════════════════════════════════════════
+print("Building fighting × entropy relationship plots…")
+
+frames_m = []
+for seed in SEEDS:
+    rr_m = pd.DataFrame(np.load(Path("data") / f"seed_{seed}" / "run_results.npy"))
+    ov_m = pd.DataFrame(np.load(Path("data") / f"seed_{seed}" / "run_overview.npy"))
+    merged = rr_m[["sample_id", "similarity_threshold", "fight_threshold",
+                    "hawk_dove_C", "police_density", "mean_fighting"]].merge(
+        ov_m[["run_id", "warmup_entropy", "end_measurement_entropy"]],
+        left_on="sample_id", right_on="run_id", how="inner"
+    )
+    frames_m.append(merged)
+
+master_df = pd.concat(frames_m, ignore_index=True)
+master_df["warmup_to_end_drop"] = master_df["warmup_entropy"] - master_df["end_measurement_entropy"]
+
+ENTROPY_METRICS_10 = [
+    ("end_measurement_entropy", "End-of-Measurement Entropy"),
+    ("warmup_to_end_drop",      "Warmup Entropy − End Entropy"),
+]
+
+SIM_FILTERS_10 = [
+    (master_df,                                            "All data"),
+    (master_df[master_df["similarity_threshold"] <  0.5], "sim < 0.5"),
+    (master_df[master_df["similarity_threshold"] >= 0.5], "sim >= 0.5"),
+]
+
+TRAJ_PARAMS_10 = [
+    ("hawk_dove_C",     "Hawk-Dove C",    "steelblue"),
+    ("fight_threshold", "Fight Threshold", "darkorange"),
+]
+
+N_TRAJ = 25
+
+
+def binned_curve(df, param, xcol, ycol, n=N_TRAJ):
+    """Bin by param; return (mean_xcol, mean_ycol) per bin, sorted by x."""
+    pv  = df[param].values
+    xv  = df[xcol].values.astype(float)
+    yv  = df[ycol].values.astype(float)
+    edges = np.linspace(pv.min(), pv.max(), n + 1)
+    idx   = np.clip(np.digitize(pv, edges) - 1, 0, n - 1)
+    xs = np.zeros(n); ys = np.zeros(n); cnt = np.zeros(n, dtype=int)
+    np.add.at(xs,  idx, xv)
+    np.add.at(ys,  idx, yv)
+    np.add.at(cnt, idx, 1)
+    ok = cnt >= 3
+    xm = np.where(ok, xs / np.where(cnt > 0, cnt, 1), np.nan)[ok]
+    ym = np.where(ok, ys / np.where(cnt > 0, cnt, 1), np.nan)[ok]
+    order = np.argsort(xm)
+    return xm[order], ym[order]
+
+
+def binned_marginal(df, param, ycol, n=N_TRAJ):
+    """Bin by param; return (normalised param center, mean_ycol) per bin."""
+    pv  = df[param].values
+    yv  = df[ycol].values.astype(float)
+    edges   = np.linspace(pv.min(), pv.max(), n + 1)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    idx     = np.clip(np.digitize(pv, edges) - 1, 0, n - 1)
+    ys  = np.zeros(n); cnt = np.zeros(n, dtype=int)
+    np.add.at(ys,  idx, yv)
+    np.add.at(cnt, idx, 1)
+    ok   = cnt >= 3
+    ym   = np.where(ok, ys / np.where(cnt > 0, cnt, 1), np.nan)
+    xn   = (centers - centers.min()) / (centers.max() - centers.min())
+    return xn[ok], ym[ok]
+
+
+# ── Figure 10: trajectory in (fighting, entropy) space ────────────────────────
+fig10, axes10 = plt.subplots(2, 3, figsize=(18, 10))
+fig10.suptitle(
+    "Trajectory in (Mean Fighting, Entropy) Space\n"
+    "Curves trace mean per parameter bin; background = individual runs",
+    fontsize=12,
+)
+
+for row_i, (ecol, elabel) in enumerate(ENTROPY_METRICS_10):
+    for col_i, (df_sub, flabel) in enumerate(SIM_FILTERS_10):
+        ax = axes10[row_i, col_i]
+        ax.scatter(df_sub["mean_fighting"], df_sub[ecol],
+                   alpha=0.04, s=3, color="gray", rasterized=True)
+        for param, plabel, color in TRAJ_PARAMS_10:
+            xs, ys = binned_curve(df_sub, param, "mean_fighting", ecol)
+            ax.plot(xs, ys, color=color, lw=2.5, marker="o", ms=4, label=plabel)
+        if row_i == 0:
+            ax.set_title(flabel, fontsize=11)
+        ax.set_xlabel("Mean fighting fans / step", fontsize=9)
+        if col_i == 0:
+            ax.set_ylabel(elabel, fontsize=9)
+
+# Single shared legend
+handles, labels = axes10[0, 0].get_legend_handles_labels()
+fig10.legend(handles, labels, loc="lower center", ncol=2, fontsize=10,
+             bbox_to_anchor=(0.5, -0.02))
+fig10.tight_layout(rect=[0, 0.04, 1, 1])
+fig10.savefig(PLOTS_DIR / "10_trajectory_fighting_entropy.png", dpi=150, bbox_inches="tight")
+plt.close(fig10)
+print("  saved: 10_trajectory_fighting_entropy.png")
+
+# ── Figure 11: dual-axis marginal ─────────────────────────────────────────────
+fig11, axes11 = plt.subplots(2, 3, figsize=(18, 10))
+fig11.suptitle(
+    "Marginal Effect of Parameters on Fighting & Entropy\n"
+    "x = normalised parameter (min→max) | solid = fighting (left y) | dashed = entropy (right y)",
+    fontsize=12,
+)
+
+for row_i, (ecol, elabel) in enumerate(ENTROPY_METRICS_10):
+    for col_i, (df_sub, flabel) in enumerate(SIM_FILTERS_10):
+        ax  = axes11[row_i, col_i]
+        ax2 = ax.twinx()
+        all_lines = []
+        for param, plabel, color in TRAJ_PARAMS_10:
+            xn_f, f_vals = binned_marginal(df_sub, param, "mean_fighting")
+            xn_e, e_vals = binned_marginal(df_sub, param, ecol)
+            l1, = ax.plot(xn_f, f_vals, color=color, lw=2.5, ls="-",
+                          label=f"{plabel} — fighting")
+            l2, = ax2.plot(xn_e, e_vals, color=color, lw=2.5, ls="--",
+                           label=f"{plabel} — entropy")
+            all_lines.extend([l1, l2])
+        if row_i == 0:
+            ax.set_title(flabel, fontsize=11)
+        ax.set_xlabel("Normalised parameter value (min → max)", fontsize=9)
+        if col_i == 0:
+            ax.set_ylabel("Mean fighting fans / step", fontsize=9)
+        if col_i == 2:
+            ax2.set_ylabel(elabel, fontsize=9)
+
+# Single shared legend
+fig11.legend(all_lines, [l.get_label() for l in all_lines],
+             loc="lower center", ncol=2, fontsize=9, bbox_to_anchor=(0.5, -0.02))
+fig11.tight_layout(rect=[0, 0.06, 1, 1])
+fig11.savefig(PLOTS_DIR / "11_dual_axis_fighting_entropy.png", dpi=150, bbox_inches="tight")
+plt.close(fig11)
+print("  saved: 11_dual_axis_fighting_entropy.png")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FIGURE 12 — 2-D heatmaps in fight_threshold × hawk_dove_C space
+#   Rows: end_measurement_entropy | warmup_to_end_drop | mean_fighting
+#   Cols: all data | sim < 0.5 | sim >= 0.5
+# ══════════════════════════════════════════════════════════════════════════════
+print("Building fight_threshold × hawk_dove_C heatmaps…")
+
+N_HM = 20  # bins per axis
+
+def heatmap_2d(df, col, xp, yp, n=N_HM):
+    """2-D binned mean; returns (x_edges, y_edges, Z[nx, ny]) for pcolormesh."""
+    xe  = np.linspace(df[xp].min(), df[xp].max(), n + 1)
+    ye  = np.linspace(df[yp].min(), df[yp].max(), n + 1)
+    xi  = np.clip(np.digitize(df[xp].values, xe) - 1, 0, n - 1)
+    yi  = np.clip(np.digitize(df[yp].values, ye) - 1, 0, n - 1)
+    Z_s = np.zeros((n, n)); Z_n = np.zeros((n, n), dtype=int)
+    np.add.at(Z_s, (xi, yi), df[col].values.astype(float))
+    np.add.at(Z_n, (xi, yi), 1)
+    Z = np.where(Z_n > 0, Z_s / Z_n, np.nan)
+    return xe, ye, Z   # pcolormesh(xe, ye, Z.T)
+
+ROWS_12 = [
+    ("end_measurement_entropy", "End-of-Measurement Entropy", "plasma",  False),
+    ("warmup_to_end_drop",      "Warmup − End Entropy",       "RdBu_r",  True),
+    ("mean_fighting",           "Mean Fighting Fans / Step",  "inferno", False),
+]
+
+SIM_FILTERS_12 = [
+    (master_df,                                            "All data"),
+    (master_df[master_df["similarity_threshold"] <  0.5], "sim < 0.5"),
+    (master_df[master_df["similarity_threshold"] >= 0.5], "sim >= 0.5"),
+]
+
+fig12, axes12 = plt.subplots(3, 3, figsize=(18, 14))
+fig12.suptitle(
+    "Fight Threshold × Hawk-Dove C  —  2-D Mean Heatmaps\n"
+    f"({N_HM}×{N_HM} bins  |  marginal over similarity_threshold & police_density)",
+    fontsize=12,
+)
+
+for row_i, (col, col_label, cmap, diverging) in enumerate(ROWS_12):
+    # Collect global vmin/vmax across all 3 filters for consistent colour scale per row
+    all_z = []
+    for df_sub, _ in SIM_FILTERS_12:
+        _, _, Z = heatmap_2d(df_sub, col, "fight_threshold", "hawk_dove_C")
+        all_z.append(Z)
+    finite = np.concatenate([z[~np.isnan(z)] for z in all_z])
+    vmin, vmax = finite.min(), finite.max()
+    if diverging:
+        absmax = max(abs(vmin), abs(vmax))
+        vmin, vmax = -absmax, absmax
+
+    for col_i, (df_sub, flabel) in enumerate(SIM_FILTERS_12):
+        ax = axes12[row_i, col_i]
+        xe, ye, Z = heatmap_2d(df_sub, col, "fight_threshold", "hawk_dove_C")
+        mesh = ax.pcolormesh(xe, ye, Z.T, cmap=cmap, vmin=vmin, vmax=vmax, shading="flat")
+        fig12.colorbar(mesh, ax=ax, label=col_label, pad=0.02)
+        ax.set_xlabel("Fight Threshold", fontsize=9)
+        if col_i == 0:
+            ax.set_ylabel("Hawk-Dove C", fontsize=9)
+        if row_i == 0:
+            ax.set_title(flabel, fontsize=11)
+        ax.text(0.02, 0.97, col_label, transform=ax.transAxes,
+                fontsize=7, va="top", color="white",
+                bbox=dict(boxstyle="round,pad=0.2", fc="black", alpha=0.4))
+
+fig12.tight_layout()
+fig12.savefig(PLOTS_DIR / "12_heatmap_fightthreshold_x_hawkdove.png", dpi=150)
+plt.close(fig12)
+print("  saved: 12_heatmap_fightthreshold_x_hawkdove.png")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FIGURE 13 — Overlaid: mean_fighting heatmap + entropy contours
+#   Cols: all data | sim < 0.5 | sim >= 0.5
+# ══════════════════════════════════════════════════════════════════════════════
+print("Building overlaid fighting heatmap + entropy contours…")
+
+fig13, axes13 = plt.subplots(1, 3, figsize=(20, 6))
+fig13.suptitle(
+    "Mean Fighting (heatmap)  +  End Entropy (solid contours)  +  Warmup−End Drop (dashed contours)\n"
+    "Fight Threshold × Hawk-Dove C space",
+    fontsize=12,
+)
+
+for col_i, (df_sub, flabel) in enumerate(SIM_FILTERS_12):
+    ax = axes13[col_i]
+
+    xe, ye, Z_fight  = heatmap_2d(df_sub, "mean_fighting",           "fight_threshold", "hawk_dove_C")
+    _,  _,  Z_eent   = heatmap_2d(df_sub, "end_measurement_entropy", "fight_threshold", "hawk_dove_C")
+    _,  _,  Z_drop   = heatmap_2d(df_sub, "warmup_to_end_drop",      "fight_threshold", "hawk_dove_C")
+
+    xc = 0.5 * (xe[:-1] + xe[1:])
+    yc = 0.5 * (ye[:-1] + ye[1:])
+    Xc, Yc = np.meshgrid(xc, yc)
+
+    # background: fighting
+    mesh = ax.pcolormesh(xe, ye, Z_fight.T, cmap="inferno", shading="flat")
+    cb = fig13.colorbar(mesh, ax=ax, pad=0.02, label="Mean fighting fans / step")
+
+    # solid contours: end entropy
+    valid_e = ~np.isnan(Z_eent.T)
+    Z_eent_filled = np.where(np.isnan(Z_eent.T), np.nanmean(Z_eent), Z_eent.T)
+    cs1 = ax.contour(Xc, Yc, Z_eent_filled, levels=8, colors="white",
+                     linewidths=1.5, linestyles="-")
+    ax.clabel(cs1, fmt="%.3f", fontsize=7, inline=True, colors="white")
+
+    # dashed contours: warmup-to-end drop
+    Z_drop_filled = np.where(np.isnan(Z_drop.T), np.nanmean(Z_drop), Z_drop.T)
+    cs2 = ax.contour(Xc, Yc, Z_drop_filled, levels=8, colors="lightcyan",
+                     linewidths=1.2, linestyles="--")
+    ax.clabel(cs2, fmt="%.3f", fontsize=7, inline=True, colors="lightcyan")
+
+    ax.set_title(flabel, fontsize=11)
+    ax.set_xlabel("Fight Threshold", fontsize=10)
+    ax.set_ylabel("Hawk-Dove C",     fontsize=10)
+
+# Legend proxies
+from matplotlib.lines import Line2D
+legend_elements = [
+    Line2D([0], [0], color="white",    lw=1.5, ls="-",  label="End entropy (solid)"),
+    Line2D([0], [0], color="lightcyan", lw=1.2, ls="--", label="Warmup−End drop (dashed)"),
+]
+fig13.legend(handles=legend_elements, loc="lower center", ncol=2,
+             fontsize=10, bbox_to_anchor=(0.5, -0.04))
+
+fig13.tight_layout(rect=[0, 0.06, 1, 1])
+fig13.savefig(PLOTS_DIR / "13_overlaid_fighting_entropy.png", dpi=150, bbox_inches="tight")
+plt.close(fig13)
+print("  saved: 13_overlaid_fighting_entropy.png")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FIGURE 13 — Combined heatmaps: ratio & product of fighting vs entropy
+#   Row 0: fighting_norm / entropy_norm  (log scale)
+#   Row 1: fighting_norm × (1 − entropy_norm)
+#   Cols: all data | sim < 0.5 | sim >= 0.5
+# ══════════════════════════════════════════════════════════════════════════════
+print("Building combined fighting/entropy heatmaps (ratio & product)…")
+
+def norm_01(Z):
+    """Min-max normalise a 2-D array, ignoring NaN."""
+    mn, mx = np.nanmin(Z), np.nanmax(Z)
+    return (Z - mn) / (mx - mn) if mx > mn else np.zeros_like(Z)
+
+# Pre-compute all 6 raw Z matrices so we can normalise globally
+raw = {}
+for df_sub, flabel in SIM_FILTERS_12:
+    _, _, Zf = heatmap_2d(df_sub, "mean_fighting",           "fight_threshold", "hawk_dove_C")
+    _, _, Ze = heatmap_2d(df_sub, "end_measurement_entropy", "fight_threshold", "hawk_dove_C")
+    raw[flabel] = (Zf, Ze)
+
+# Global min/max for normalisation (across all filters)
+all_f = np.concatenate([v[0][~np.isnan(v[0])] for v in raw.values()])
+all_e = np.concatenate([v[1][~np.isnan(v[1])] for v in raw.values()])
+f_min, f_max = all_f.min(), all_f.max()
+e_min, e_max = all_e.min(), all_e.max()
+
+def norm_global(Z, vmin, vmax):
+    return (Z - vmin) / (vmax - vmin) if vmax > vmin else np.zeros_like(Z)
+
+fig13, axes13 = plt.subplots(2, 3, figsize=(18, 10))
+fig13.suptitle(
+    "Fight Threshold × Hawk-Dove C  —  Fighting vs End Entropy (globally normalised)\n"
+    "Top: fighting_norm / entropy_norm (log)  |  Bottom: fighting_norm × (1 − entropy_norm)",
+    fontsize=12,
+)
+
+ROWS_13 = [
+    ("ratio",   "fighting_norm / entropy_norm  (log)",         "RdYlGn_r"),
+    ("product", "fighting_norm × (1 − entropy_norm)",          "YlOrRd"),
+]
+
+# Compute combined Z matrices and get global colour limits per row
+row_zlims = {}
+for row_key, _, _ in ROWS_13:
+    all_z = []
+    for flabel in [fl for _, fl in SIM_FILTERS_12]:
+        Zf_n = norm_global(raw[flabel][0], f_min, f_max)
+        Ze_n = norm_global(raw[flabel][1], e_min, e_max)
+        if row_key == "ratio":
+            Z = np.log1p(Zf_n) - np.log1p(Ze_n + 1e-6)  # log(fighting) - log(entropy)
+        else:
+            Z = Zf_n * (1 - Ze_n)
+        finite = Z[~np.isnan(Z)]
+        if len(finite):
+            all_z.extend(finite)
+    row_zlims[row_key] = (min(all_z), max(all_z))
+
+xe_ref, ye_ref, _ = heatmap_2d(master_df, "mean_fighting", "fight_threshold", "hawk_dove_C")
+xc = 0.5 * (xe_ref[:-1] + xe_ref[1:])
+yc = 0.5 * (ye_ref[:-1] + ye_ref[1:])
+
+for row_i, (row_key, row_label, cmap) in enumerate(ROWS_13):
+    vmin, vmax = row_zlims[row_key]
+    for col_i, (df_sub, flabel) in enumerate(SIM_FILTERS_12):
+        ax = axes13[row_i, col_i]
+        xe, ye, _ = heatmap_2d(df_sub, "mean_fighting", "fight_threshold", "hawk_dove_C")
+
+        Zf_n = norm_global(raw[flabel][0], f_min, f_max)
+        Ze_n = norm_global(raw[flabel][1], e_min, e_max)
+        if row_key == "ratio":
+            Z = np.log1p(Zf_n) - np.log1p(Ze_n + 1e-6)
+        else:
+            Z = Zf_n * (1 - Ze_n)
+
+        mesh = ax.pcolormesh(xe, ye, Z.T, cmap=cmap, vmin=vmin, vmax=vmax, shading="flat")
+        fig13.colorbar(mesh, ax=ax, pad=0.02)
+
+        if row_i == 0:
+            ax.set_title(flabel, fontsize=11)
+        ax.set_xlabel("Fight Threshold", fontsize=9)
+        if col_i == 0:
+            ax.set_ylabel(f"{row_label}\n\nHawk-Dove C", fontsize=9)
+        else:
+            ax.set_ylabel("Hawk-Dove C", fontsize=9)
+
+fig13.tight_layout()
+fig13.savefig(PLOTS_DIR / "13_combined_fighting_entropy.png", dpi=150)
+plt.close(fig13)
+print("  saved: 13_combined_fighting_entropy.png")
+
 print(f"\nAll plots saved to {PLOTS_DIR.resolve()}")
