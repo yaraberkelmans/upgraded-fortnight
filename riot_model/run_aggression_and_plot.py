@@ -6,11 +6,6 @@ import matplotlib.pyplot as plt
 
 from riot_model import RiotModel, RiotParams, SegregationParams
 
-# ============================================================
-# ALLEEN HIER AANPASSEN
-# ============================================================
-
-
 @dataclass
 class Config:
     # Welke parameter wil je onderzoeken?
