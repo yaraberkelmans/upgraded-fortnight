@@ -1,0 +1,40 @@
+{
+  "experiment": "fixed_cohort_time_to_arrest",
+  "number_of_setups": 3,
+  "repeats_per_setup": 10,
+  "total_runs": 30,
+  "base_seed": 43,
+  "paired_seeds": true,
+  "agent_density": 0.6,
+  "grid_N": 40,
+  "riot_burn_in_steps": 100,
+  "measurement_steps": 100,
+  "setups": [
+    {
+      "name": "low_similarity_threshold",
+      "similarity_threshold": 0.1,
+      "fight_threshold": 0.05,
+      "hawk_dove_C": 5.0,
+      "police_density": 0.04,
+      "logit_beta": 5.0
+    },
+    {
+      "name": "medium_similarity_threshold",
+      "similarity_threshold": 0.2,
+      "fight_threshold": 0.05,
+      "hawk_dove_C": 5.0,
+      "police_density": 0.04,
+      "logit_beta": 5.0
+    },
+    {
+      "name": "high_similarity_threshold",
+      "similarity_threshold": 0.4,
+      "fight_threshold": 0.05,
+      "hawk_dove_C": 5.0,
+      "police_density": 0.04,
+      "logit_beta": 5.0
+    }
+  ],
+  "fighting_series": "Number of fighting fans after each measurement step, saved per run.",
+  "cohort_rule": "Only fans present at measurement start are included. Respawns created during measurement are excluded."
+}
