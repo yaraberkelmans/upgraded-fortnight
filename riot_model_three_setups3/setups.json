@@ -1,0 +1,26 @@
+[
+  {
+    "name": "low_similarity_threshold",
+    "similarity_threshold": 0.1,
+    "fight_threshold": 0.05,
+    "hawk_dove_C": 5.0,
+    "police_density": 0.04,
+    "logit_beta": 5.0
+  },
+  {
+    "name": "medium_similarity_threshold",
+    "similarity_threshold": 0.2,
+    "fight_threshold": 0.05,
+    "hawk_dove_C": 5.0,
+    "police_density": 0.04,
+    "logit_beta": 5.0
+  },
+  {
+    "name": "high_similarity_threshold",
+    "similarity_threshold": 0.4,
+    "fight_threshold": 0.05,
+    "hawk_dove_C": 5.0,
+    "police_density": 0.04,
+    "logit_beta": 5.0
+  }
+]
