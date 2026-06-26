@@ -26,6 +26,7 @@ Folders:
 - ORIGIINAL_MODELS: Legacy code for Schelling and Epstein model. Also contains the code to run the servers.
 - RIOT_MODEL: First version of our riot-model. It's not vectorized so a bit slow but with the server you can see some nice simulations!
 - SNELLIUS_FILES: Contains the files needed to run big simulations of our model and the script to run it locally. This folder also contains a README with some more explaination how to use it. 
+- EXPERIMENTS: Here you can find the code for the plots we made in the report. The experiments do have seperate folders to make it easier to run as all models are the same but we adjusted some parameters. 
 
 ## Run the solara interface
 
