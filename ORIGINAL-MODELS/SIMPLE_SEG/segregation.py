@@ -92,8 +92,7 @@ class Household:
 
         min_distance = min(torus_distance(pos) for pos in empty_positions)
         nearest_positions = [
-            pos for pos in empty_positions
-            if torus_distance(pos) == min_distance
+            pos for pos in empty_positions if torus_distance(pos) == min_distance
         ]
         return self.random.choice(nearest_positions)
 
@@ -168,9 +167,7 @@ class SegregationModel(Model):
         number_of_green = number_of_agents - number_of_red
 
         all_positions = [
-            (x, y)
-            for x in range(self.params.N)
-            for y in range(self.params.N)
+            (x, y) for x in range(self.params.N) for y in range(self.params.N)
         ]
         self.random.shuffle(all_positions)
 

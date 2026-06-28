@@ -1,12 +1,7 @@
-"""Police agent for the riot model."""
+"""Police agent for the riot model (refactor variant)."""
 
 import math
-
-try:
-    from riot_model.fan import Fan, FanGroup
-except ImportError:
-    from fan import Fan, FanGroup
-
+from .fan import Fan, FanGroup
 
 class Police:
     """Police agent that pursues and arrests fighting fans."""
@@ -31,15 +26,42 @@ class Police:
         return self._grid_distance(self.pos, pos)
 
     def nearest_empty_position(self):
-        empty_positions = list(self.model.grid.empties)
-        if not empty_positions:
-            return None
-        distances = [self.torus_distance(pos) for pos in empty_positions]
-        weights = [
-            math.exp(-self.model.segregation_params.movement_decay * distance)
-            for distance in distances
-        ]
-        return self.random.choices(empty_positions, weights=weights, k=1)[0]
+        # Enumerate only the radius-5 window around the agent and keep the empty
+        # cells, instead of scanning every empty cell on the grid. The Chebyshev
+        # distance is the offset itself, so no per-cell distance call is needed.
+        grid = self.model.grid
+        N = grid.width
+        torus = self.model.segregation_params.torus
+        decay = self.model.segregation_params.movement_decay
+        x, y = self.pos
+
+        positions = []
+        weights = []
+        for dx in range(-5, 6):
+            for dy in range(-5, 6):
+                if dx == 0 and dy == 0:
+                    continue
+                nx = x + dx
+                ny = y + dy
+                if torus:
+                    nx %= N
+                    ny %= N
+                elif nx < 0 or ny < 0 or nx >= N or ny >= N:
+                    continue
+                pos = (nx, ny)
+                if grid.is_cell_empty(pos):
+                    positions.append(pos)
+                    weights.append(math.exp(-decay * max(abs(dx), abs(dy))))
+
+        if not positions:
+            # Rare: no empty cell within radius 5 -> fall back to a global scan.
+            empty_positions = list(grid.empties)
+            if not empty_positions:
+                return None
+            weights = [math.exp(-decay * self.torus_distance(pos)) for pos in empty_positions]
+            return self.random.choices(empty_positions, weights=weights, k=1)[0]
+
+        return self.random.choices(positions, weights=weights, k=1)[0]
 
     def move(self):
         self.last_move_distance = 0
@@ -65,6 +87,14 @@ class Police:
         return True
 
     def arrest(self, fan):
+        # Only record fans that belonged to the fixed cohort defined at the
+        # start of the measurement phase. Respawns created during measurement
+        # have measurement_cohort_id == -1 and therefore cannot enter the
+        # analysis repeatedly.
+        cohort_id = int(getattr(fan, "measurement_cohort_id", -1))
+        if cohort_id >= 0:
+            self.model.arrested_fans_this_step.append(cohort_id)
+
         self.model.grid.remove_agent(fan)
         self.model.fans.remove(fan)
         self.model.arrests_this_step += 1
@@ -73,10 +103,13 @@ class Police:
         empty_positions = list(self.model.grid.empties)
         if empty_positions:
             new_pos = self.model.random.choice(empty_positions)
-            group = FanGroup.HOME if self.model.random.random() < 0.5 else FanGroup.AWAY
-            new_fan = Fan(self.model, group)
+            group = FanGroup.HOME if self.model.random.random() < self.model.segregation_params.home_fraction else FanGroup.AWAY
+            new_fan = Fan(self.model, group, is_respawn=True)
             self.model.fans.append(new_fan)
             self.model.grid.place_agent(new_fan, new_pos)
+            # Gives the new fan sane values immediately; the end-of-tick
+            # _build_spatial_state() recomputes it anyway. Consumes no RNG, so
+            # keeping it preserves exact parity with the original model.
             new_fan.update_perceived_probabilities()
 
     def step(self):
@@ -88,7 +121,9 @@ class Police:
             radius=self.model.riot_params.police_vision,
         )
         fighting_fans = [
-            agent for agent in neighbors if isinstance(agent, Fan) and agent.fighting
+            agent
+            for agent in neighbors
+            if isinstance(agent, Fan) and agent.fighting
         ]
         if not fighting_fans:
             self.move()

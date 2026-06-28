@@ -49,7 +49,9 @@ def plot_happiness_results(results):
 
 
 def plot_similarity_results(results):
-    ax = results[["Average similarity", "Moves"]].plot(figsize=(10, 5), secondary_y="Moves")
+    ax = results[["Average similarity", "Moves"]].plot(
+        figsize=(10, 5), secondary_y="Moves"
+    )
     ax.set_title("Average local similarity and moves per step")
     ax.set_xlabel("Step")
     ax.set_ylabel("Average similarity")
@@ -102,12 +104,24 @@ def main():
     plot_similarity_results(results)
     plot_grid(model, title="Eindtoestand")
 
-    low_threshold = run_threshold_experiment(similarity_threshold=0.25, steps=100, seed=42)
-    high_threshold = run_threshold_experiment(similarity_threshold=0.50, steps=100, seed=42)
+    low_threshold = run_threshold_experiment(
+        similarity_threshold=0.25, steps=100, seed=42
+    )
+    high_threshold = run_threshold_experiment(
+        similarity_threshold=0.50, steps=100, seed=42
+    )
 
     plt.figure(figsize=(10, 5))
-    plt.plot(low_threshold.index, low_threshold["Average similarity"], label="Threshold = 0.25")
-    plt.plot(high_threshold.index, high_threshold["Average similarity"], label="Threshold = 0.50")
+    plt.plot(
+        low_threshold.index,
+        low_threshold["Average similarity"],
+        label="Threshold = 0.25",
+    )
+    plt.plot(
+        high_threshold.index,
+        high_threshold["Average similarity"],
+        label="Threshold = 0.50",
+    )
     plt.title("Effect van similarity threshold op segregatie")
     plt.xlabel("Step")
     plt.ylabel("Average similarity")

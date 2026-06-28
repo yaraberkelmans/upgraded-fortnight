@@ -7,9 +7,11 @@ from mesa import Model
 from mesa.datacollection import DataCollector
 from mesa.space import SingleGrid
 
+
 class CitizenState(Enum):
     QUIET = "quiet"
     ACTIVE = "active"
+
 
 @dataclass
 class CivilViolenceParams:
@@ -23,6 +25,7 @@ class CivilViolenceParams:
     k: float = -math.log(0.1)
     steps: int = 200
     seed: int = 42
+
 
 class Citizen:
     def __init__(self, model):
@@ -47,7 +50,7 @@ class Citizen:
             self.pos,
             moore=True,
             include_center=False,
-            radius=self.model.params.citizen_vision
+            radius=self.model.params.citizen_vision,
         )
 
         cops = sum(isinstance(agent, Cop) for agent in neighbors)
@@ -88,12 +91,11 @@ class Citizen:
             self.pos,
             moore=True,
             include_center=False,
-            radius=self.model.params.citizen_vision
+            radius=self.model.params.citizen_vision,
         )
 
         empty_positions = [
-            pos for pos in possible_positions
-            if self.model.grid.is_cell_empty(pos)
+            pos for pos in possible_positions if self.model.grid.is_cell_empty(pos)
         ]
 
         if empty_positions:
@@ -103,6 +105,7 @@ class Citizen:
     def step(self):
         self.decide_state()
         self.move_randomly_within_vision()
+
 
 class Cop:
     def __init__(self, model):
@@ -115,11 +118,12 @@ class Cop:
             self.pos,
             moore=True,
             include_center=False,
-            radius=self.model.params.cop_vision
+            radius=self.model.params.cop_vision,
         )
 
         active_citizens = [
-            agent for agent in neighbors
+            agent
+            for agent in neighbors
             if isinstance(agent, Citizen) and agent.state == CitizenState.ACTIVE
         ]
 
@@ -141,12 +145,11 @@ class Cop:
             self.pos,
             moore=True,
             include_center=False,
-            radius=self.model.params.cop_vision
+            radius=self.model.params.cop_vision,
         )
 
         empty_positions = [
-            pos for pos in possible_positions
-            if self.model.grid.is_cell_empty(pos)
+            pos for pos in possible_positions if self.model.grid.is_cell_empty(pos)
         ]
 
         if empty_positions:
@@ -161,6 +164,7 @@ class Cop:
             self.arrest(citizen)
         else:
             self.move_randomly_within_vision()
+
 
 class CivilViolenceModel(Model):
     def __init__(self, params: CivilViolenceParams | None = None, **kwargs):
@@ -215,16 +219,14 @@ class CivilViolenceModel(Model):
         number_of_cops = int(total_cells * self.params.cop_density)
 
         all_positions = [
-            (x, y)
-            for x in range(self.params.N)
-            for y in range(self.params.N)
+            (x, y) for x in range(self.params.N) for y in range(self.params.N)
         ]
 
         self.random.shuffle(all_positions)
 
         citizen_positions = all_positions[:number_of_citizens]
         cop_positions = all_positions[
-            number_of_citizens:number_of_citizens + number_of_cops
+            number_of_citizens : number_of_citizens + number_of_cops
         ]
 
         for pos in citizen_positions:

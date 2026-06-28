@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass, fields
 from pathlib import Path
 
@@ -6,11 +5,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from riot_model import RiotModel, RiotParams, SegregationParams
-
-
-# ============================================================
-# ALLEEN HIER AANPASSEN
-# ============================================================
 
 @dataclass
 class Config:
@@ -55,15 +49,9 @@ CFG = Config()
 # NIET NODIG OM HIERONDER AAN TE PASSEN
 # ============================================================
 
-SEGREGATION_FIELDS = {
-    field.name: field.type
-    for field in fields(SegregationParams)
-}
+SEGREGATION_FIELDS = {field.name: field.type for field in fields(SegregationParams)}
 
-RIOT_FIELDS = {
-    field.name: field.type
-    for field in fields(RiotParams)
-}
+RIOT_FIELDS = {field.name: field.type for field in fields(RiotParams)}
 
 INTEGER_PARAMETERS = {
     "N",
@@ -131,9 +119,7 @@ def build_params(sweep_value, seed):
     elif CFG.sweep_parameter in riot_kwargs:
         riot_kwargs[CFG.sweep_parameter] = value
     else:
-        valid = sorted(
-            set(segregation_kwargs) | set(riot_kwargs)
-        )
+        valid = sorted(set(segregation_kwargs) | set(riot_kwargs))
         raise ValueError(
             f"Onbekende sweep_parameter: {CFG.sweep_parameter}\n"
             f"Kies uit: {', '.join(valid)}"
@@ -168,19 +154,20 @@ def run_experiment():
 
             remaining_fans = len(model.fans)
 
-            rows.append({
-                "repetition": repetition,
-                "seed": seed,
-                "parameter": CFG.sweep_parameter,
-                "parameter_value": cast_sweep_value(raw_value),
-                "total_arrests": total_arrests,
-                "initial_fans": initial_fans,
-                "remaining_fans": remaining_fans,
-                "arrest_fraction": (
-                    total_arrests / initial_fans
-                    if initial_fans else 0.0
-                ),
-            })
+            rows.append(
+                {
+                    "repetition": repetition,
+                    "seed": seed,
+                    "parameter": CFG.sweep_parameter,
+                    "parameter_value": cast_sweep_value(raw_value),
+                    "total_arrests": total_arrests,
+                    "initial_fans": initial_fans,
+                    "remaining_fans": remaining_fans,
+                    "arrest_fraction": (
+                        total_arrests / initial_fans if initial_fans else 0.0
+                    ),
+                }
+            )
 
             print(
                 f"run={repetition} "
@@ -280,18 +267,12 @@ def make_plots(df, output_dir):
 
 
 def main():
-    output_dir = (
-        Path(CFG.output_dir)
-        / CFG.sweep_parameter
-    )
+    output_dir = Path(CFG.output_dir) / CFG.sweep_parameter
     output_dir.mkdir(parents=True, exist_ok=True)
 
     results = run_experiment()
 
-    csv_path = (
-        output_dir
-        / f"{CFG.sweep_parameter}_experiment.csv"
-    )
+    csv_path = output_dir / f"{CFG.sweep_parameter}_experiment.csv"
     results.to_csv(csv_path, index=False)
 
     summary = make_plots(results, output_dir)

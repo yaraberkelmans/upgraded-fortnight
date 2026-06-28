@@ -2,10 +2,11 @@
 __pycache__/
 *.py[codz]
 *$py.class
-
+data
+.npy
 # C extensions
 *.so
-
+.DS_Store
 # Distribution / packaging
 .Python
 build/
@@ -67,7 +68,7 @@ instance/
 
 # Scrapy stuff:
 .scrapy
-
+.nyp
 # Sphinx documentation
 docs/_build/
 
