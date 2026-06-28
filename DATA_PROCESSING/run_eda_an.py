@@ -3,7 +3,9 @@ Run-level EDA: full time-series output for two representative runs
 (similarity_threshold ≈ 0.4 and ≈ 0.8) plus warmup/entropy comparison.
 
 Run from project root:
-    python DATA_PROCESSING/run_eda.py
+    python DATA_PROCESSING/run_eda.py 
+
+DATA FOLDER SHOULD BE IN ROOT
 """
 
 import sys
