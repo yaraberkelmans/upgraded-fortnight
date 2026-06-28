@@ -7,6 +7,7 @@ This README explains the file structure and how to run the simulations.
 
 This project was carried out for the Agent-Based Modelling course at the University of Amsterdam in 2026.
 
+If you want to run all plots script you need to have the data. This is available after emailing: ruben.lanjouw14@gmail.com the zip file is not on git because of it size (530mb zipped).
 
 ## How to run it.
 ### Step 1. Setup Venv
@@ -26,7 +27,8 @@ Folders:
 - ORIGIINAL_MODELS: Legacy code for Schelling and Epstein model. Also contains the code to run the servers.
 - RIOT_MODEL: First version of our riot-model. It's not vectorized so a bit slow but with the server you can see some nice simulations!
 - SNELLIUS_FILES: Contains the files needed to run big simulations of our model and the script to run it locally. This folder also contains a README with some more explaination how to use it. 
-- EXPERIMENTS: Here you can find the code for the plots we made in the report. The experiments do have seperate folders to make it easier to run as all models are the same but we adjusted some parameters. 
+- EXPERIMENTS: Here you can find the code for the plots we made in the report which are not related to the data from snellius. The experiments do have seperate folders to make it easier to run as all models are the same but we adjusted some parameters. 
+- DATA_PROCESSING: Contains the scripts used for the Sobol sensitivity analysis and exploratory data analysis presented in the report. We recommend running these scripts from the repository root, with the Snellius output stored in the root-level data folder.
 
 ## Run the solara interface
 
@@ -38,15 +40,15 @@ solara run server_riot_model.py
 
 We used AI to help us implement our ideas and further develop the model. We tried to use it as responsibly as possible by reviewing the generated code, testing the model, and critically evaluating the assumptions and results.
 
-## Literature
+### CREDITS AND DIVIDENCE OF WORK
+We think we devided the work evenly. We helped each other as much as possible and did what we could the work in coding and plotting was devided evenly and we had owners for specic parts of the project the devidence was as followed:
+    -Max: Snellius, Sobol
+    -Yara: Model, Report, Presentation
+    -Mark: Model, Eda, Vectorizing
+    -Ruben: Model, GIT, Snellius 
+
+
+## Main Literature
 
 1. Epstein, Joshua M. “Modeling Civil Violence: An Agent-Based Computational Approach.” Proceedings of the National Academy of Sciences 99, suppl. 3 (2002): 7243–7250.
 2. Schelling, Thomas C. “Dynamic Models of Segregation.” Journal of Mathematical Sociology 1, no. 2 (1971): 143–186.
-
-## Licence
-
-MIT Licence
-
-### CREDITS
-
-Max, Yara, Mark, Ruben
