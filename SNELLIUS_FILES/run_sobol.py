@@ -13,7 +13,6 @@ Each worker writes only files belonging to its own sample ID, so the layout is
 safe with multiprocessing. After all workers finish, the main process combines
 all overview files into ``data/run_overview.npy``.
 """
-
 from __future__ import annotations
 
 import argparse
@@ -51,74 +50,66 @@ RIOT_BURN_IN_STEPS = 100
 MEASUREMENT_STEPS = 100
 MAX_SPATIAL_WARMUP_STEPS = 2_000
 
-RESULT_DTYPE = np.dtype(
-    [
-        ("sample_id", np.int32),
-        ("valid", np.bool_),
-        ("failure_code", "U64"),
-        ("seed", np.int64),
-        ("similarity_threshold", np.float64),
-        ("fight_threshold", np.float64),
-        ("hawk_dove_C", np.float64),
-        ("police_density", np.float64),
-        ("warmup_steps", np.int32),
-        ("runtime_seconds", np.float64),
-        ("mean_fighting", np.float64),
-        ("std_fighting", np.float64),
-        ("peak_fighting", np.float64),
-        ("mean_fighting_fraction", np.float64),
-        ("arrests_measurement", np.float64),
-        ("mean_arrests_per_step", np.float64),
-        ("mean_spatial_entropy_local", np.float64),
-        ("mean_similarity", np.float64),
-        ("mean_happy_fraction", np.float64),
-        ("mean_win_probability", np.float64),
-        ("mean_arrest_probability", np.float64),
-    ]
-)
+RESULT_DTYPE = np.dtype([
+    ("sample_id", np.int32),
+    ("valid", np.bool_),
+    ("failure_code", "U64"),
+    ("seed", np.int64),
+    ("similarity_threshold", np.float64),
+    ("fight_threshold", np.float64),
+    ("hawk_dove_C", np.float64),
+    ("police_density", np.float64),
+    ("warmup_steps", np.int32),
+    ("runtime_seconds", np.float64),
+    ("mean_fighting", np.float64),
+    ("std_fighting", np.float64),
+    ("peak_fighting", np.float64),
+    ("mean_fighting_fraction", np.float64),
+    ("arrests_measurement", np.float64),
+    ("mean_arrests_per_step", np.float64),
+    ("mean_spatial_entropy_local", np.float64),
+    ("mean_similarity", np.float64),
+    ("mean_happy_fraction", np.float64),
+    ("mean_win_probability", np.float64),
+    ("mean_arrest_probability", np.float64),
+])
 
-MEASUREMENT_DTYPE = np.dtype(
-    [
-        ("step", np.int16),
-        ("fighting", np.int32),
-        ("home", np.int32),
-        ("away", np.int32),
-        ("police", np.int32),
-        ("happy", np.int32),
-        ("unhappy", np.int32),
-        ("moves", np.int32),
-        ("arrests_step", np.int32),
-        ("measurement_total_arrests", np.int32),
-        ("spatial_entropy_local", np.float64),
-        ("average_similarity", np.float64),
-        ("happy_fraction", np.float64),
-        ("fighting_fraction", np.float64),
-        ("average_win_probability", np.float64),
-        ("average_arrest_probability", np.float64),
-    ]
-)
+MEASUREMENT_DTYPE = np.dtype([
+    ("step", np.int16),
+    ("fighting", np.int32),
+    ("home", np.int32),
+    ("away", np.int32),
+    ("police", np.int32),
+    ("happy", np.int32),
+    ("unhappy", np.int32),
+    ("moves", np.int32),
+    ("arrests_step", np.int32),
+    ("measurement_total_arrests", np.int32),
+    ("spatial_entropy_local", np.float64),
+    ("average_similarity", np.float64),
+    ("happy_fraction", np.float64),
+    ("fighting_fraction", np.float64),
+    ("average_win_probability", np.float64),
+    ("average_arrest_probability", np.float64),
+])
 
 # The array index is not used as time because this is a compact event table.
 # ``step`` is the 0-based measurement snapshot in which the arrest happened.
-ARREST_DTYPE = np.dtype(
-    [
-        ("step", np.int16),
-        ("is_respawn", np.bool_),
-        ("aggressiveness", np.float64),
-        ("is_home", np.bool_),
-    ]
-)
+ARREST_DTYPE = np.dtype([
+    ("step", np.int16),
+    ("is_respawn", np.bool_),
+    ("aggressiveness", np.float64),
+    ("is_home", np.bool_),
+])
 
-OVERVIEW_DTYPE = np.dtype(
-    [
-        ("run_id", np.int32),
-        ("valid", np.bool_),
-        ("warmup_steps", np.int32),
-        ("warmup_entropy", np.float64),
-        ("start_measurement_entropy", np.float64),
-        ("end_measurement_entropy", np.float64),
-    ]
-)
+OVERVIEW_DTYPE = np.dtype([
+    ("run_id", np.int32),
+    ("valid", np.bool_),
+    ("warmup_steps", np.int32),
+    ("warmup_entropy", np.float64),
+    ("start_measurement_entropy", np.float64),
+    ("end_measurement_entropy", np.float64),
+])
 
 
 def _fine_entropy(model: RiotModel) -> float:
@@ -135,19 +126,14 @@ def _save_overview(
     end_measurement_entropy: float,
 ) -> None:
     overview_dir.mkdir(parents=True, exist_ok=True)
-    row = np.asarray(
-        [
-            (
-                sample_id,
-                valid,
-                warmup_steps,
-                warmup_entropy,
-                start_measurement_entropy,
-                end_measurement_entropy,
-            )
-        ],
-        dtype=OVERVIEW_DTYPE,
-    )
+    row = np.asarray([(
+        sample_id,
+        valid,
+        warmup_steps,
+        warmup_entropy,
+        start_measurement_entropy,
+        end_measurement_entropy,
+    )], dtype=OVERVIEW_DTYPE)
     np.save(overview_dir / f"overview_{sample_id:04d}.npy", row, allow_pickle=False)
 
 
@@ -162,27 +148,11 @@ def _failed(
     similarity_threshold, fight_threshold, hawk_dove_C, police_density = values
     nan = float("nan")
     return (
-        sample_id,
-        False,
-        code,
-        model_seed,
-        float(similarity_threshold),
-        float(fight_threshold),
-        float(hawk_dove_C),
-        float(police_density),
-        warmup_steps,
-        time.perf_counter() - started,
-        nan,
-        nan,
-        nan,
-        nan,
-        nan,
-        nan,
-        nan,
-        nan,
-        nan,
-        nan,
-        nan,
+        sample_id, False, code, model_seed,
+        float(similarity_threshold), float(fight_threshold),
+        float(hawk_dove_C), float(police_density),
+        warmup_steps, time.perf_counter() - started,
+        nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
     )
 
 
@@ -231,9 +201,7 @@ def run_one(job: tuple[int, tuple[float, ...], str, int]) -> tuple:
         model = RiotModel(segregation_params=segregation, riot_params=riot)
     except Exception as exc:
         _save_overview(overview_dir, sample_id, False, 0, nan, nan, nan)
-        return _failed(
-            sample_id, values, model_seed, 0, started, f"init:{type(exc).__name__}"
-        )
+        return _failed(sample_id, values, model_seed, 0, started, f"init:{type(exc).__name__}")
 
     warmup_steps = 0
     try:
@@ -243,40 +211,22 @@ def run_one(job: tuple[int, tuple[float, ...], str, int]) -> tuple:
     except Exception as exc:
         warmup_entropy = _fine_entropy(model)
         _save_overview(
-            overview_dir,
-            sample_id,
-            False,
-            warmup_steps,
-            warmup_entropy,
-            nan,
-            nan,
+            overview_dir, sample_id, False, warmup_steps,
+            warmup_entropy, nan, nan,
         )
         return _failed(
-            sample_id,
-            values,
-            model_seed,
-            warmup_steps,
-            started,
+            sample_id, values, model_seed, warmup_steps, started,
             f"warmup:{type(exc).__name__}",
         )
 
     warmup_entropy = _fine_entropy(model)
     if model.in_warmup:
         _save_overview(
-            overview_dir,
-            sample_id,
-            False,
-            warmup_steps,
-            warmup_entropy,
-            nan,
-            nan,
+            overview_dir, sample_id, False, warmup_steps,
+            warmup_entropy, nan, nan,
         )
         return _failed(
-            sample_id,
-            values,
-            model_seed,
-            warmup_steps,
-            started,
+            sample_id, values, model_seed, warmup_steps, started,
             "warmup_not_converged",
         )
 
@@ -295,14 +245,12 @@ def run_one(job: tuple[int, tuple[float, ...], str, int]) -> tuple:
             # Police.arrest records only properties. The measurement step is
             # attached here, giving the compact tuple requested for analysis.
             for is_respawn, aggressiveness, is_home in model.arrested_fans_this_step:
-                arrest_records.append(
-                    (
-                        t,
-                        bool(is_respawn),
-                        float(aggressiveness),
-                        bool(is_home),
-                    )
-                )
+                arrest_records.append((
+                    t,
+                    bool(is_respawn),
+                    float(aggressiveness),
+                    bool(is_home),
+                ))
 
             n_fans = max(len(model.fans), 1)
             home = model.count_group(FanGroup.HOME)
@@ -356,20 +304,13 @@ def run_one(job: tuple[int, tuple[float, ...], str, int]) -> tuple:
         )
     except Exception as exc:
         _save_overview(
-            overview_dir,
-            sample_id,
-            False,
-            warmup_steps,
+            overview_dir, sample_id, False, warmup_steps,
             warmup_entropy,
             locals().get("start_measurement_entropy", nan),
             nan,
         )
         return _failed(
-            sample_id,
-            values,
-            model_seed,
-            warmup_steps,
-            started,
+            sample_id, values, model_seed, warmup_steps, started,
             f"riot:{type(exc).__name__}",
         )
 
@@ -383,26 +324,15 @@ def run_one(job: tuple[int, tuple[float, ...], str, int]) -> tuple:
     n_fans = max(len(model.fans), 1)
 
     return (
-        sample_id,
-        True,
-        "",
-        model_seed,
-        float(similarity_threshold),
-        float(fight_threshold),
-        float(hawk_dove_C),
-        float(police_density),
-        warmup_steps,
-        time.perf_counter() - started,
-        float(fighting.mean()),
-        float(fighting.std()),
-        float(fighting.max()),
+        sample_id, True, "", model_seed,
+        float(similarity_threshold), float(fight_threshold),
+        float(hawk_dove_C), float(police_density),
+        warmup_steps, time.perf_counter() - started,
+        float(fighting.mean()), float(fighting.std()), float(fighting.max()),
         float((fighting / n_fans).mean()),
-        float(arrests.sum()),
-        float(arrests.mean()),
-        float(entropy.mean()),
-        float(similarity.mean()),
-        float(happy_fraction.mean()),
-        float(win_probability.mean()),
+        float(arrests.sum()), float(arrests.mean()),
+        float(entropy.mean()), float(similarity.mean()),
+        float(happy_fraction.mean()), float(win_probability.mean()),
         float(arrest_probability.mean()),
     )
 
@@ -438,13 +368,16 @@ def _combine_overviews(output_dir: Path, expected_runs: int) -> None:
     if not paths:
         return
 
-    combined = np.concatenate([np.load(path, allow_pickle=False) for path in paths])
+    combined = np.concatenate([
+        np.load(path, allow_pickle=False) for path in paths
+    ])
     combined.sort(order="run_id")
     np.save(output_dir / "run_overview.npy", combined, allow_pickle=False)
 
     if len(combined) != expected_runs:
         print(
-            f"WARNING: overview has {len(combined)} rows; " f"expected {expected_runs}."
+            f"WARNING: overview has {len(combined)} rows; "
+            f"expected {expected_runs}."
         )
 
 
@@ -525,17 +458,11 @@ def main() -> None:
     np.save(args.output_dir / "run_results.npy", results, allow_pickle=False)
 
     output_fields = [
-        "mean_fighting",
-        "std_fighting",
-        "peak_fighting",
-        "mean_fighting_fraction",
-        "arrests_measurement",
-        "mean_arrests_per_step",
-        "mean_spatial_entropy_local",
-        "mean_similarity",
-        "mean_happy_fraction",
-        "mean_win_probability",
-        "mean_arrest_probability",
+        "mean_fighting", "std_fighting", "peak_fighting",
+        "mean_fighting_fraction", "arrests_measurement",
+        "mean_arrests_per_step", "mean_spatial_entropy_local",
+        "mean_similarity", "mean_happy_fraction",
+        "mean_win_probability", "mean_arrest_probability",
     ]
     np.savez_compressed(
         args.output_dir / "sobol_outputs.npz",
