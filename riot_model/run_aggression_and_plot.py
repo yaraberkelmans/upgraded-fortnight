@@ -18,12 +18,12 @@ from riot_model import RiotModel, RiotParams, SegregationParams
 @dataclass
 class Config:
     # The to sweep param.
-    sweep_parameter: str = "police_density"
+    sweep_parameter: str = "home_fraction"
 
     # other values
     sweep_start: float = 0.0
-    sweep_stop: float = 0.1
-    sweep_step: float = 0.01
+    sweep_stop: float = 1
+    sweep_step: float = 0.1
 
     repetitions: int = 3
     model_steps: int = 20
@@ -31,7 +31,7 @@ class Config:
 
     # fixed
     N: int = 40
-    agent_density: float = 0.80
+    agent_density: float = 0.60
     home_fraction: float = 0.50
     similarity_threshold: float = 0.30
     movement_decay: float = 1.0
