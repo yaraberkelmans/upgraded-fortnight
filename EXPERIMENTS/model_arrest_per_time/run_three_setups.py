@@ -1,15 +1,20 @@
-"""Run a small fixed-cohort arrest experiment.
-
-Default design:
-- 3 editable setups from setups.json
-- 10 independent repetitions per setup
-- agent density fixed at 0.6
-- 100 riot burn-in steps
-- 100 measurement steps
-
-Only fans present at measurement start belong to the cohort. Fans respawned
-inside the measurement period are excluded from the time-to-arrest analysis.
 """
+DATE: 28-6-2026
+NAMES: Ruben, Mark, Yara, Max
+
+Description: 
+Run a small fixed-cohort arrest experiment. 
+The experiment runs three setups, each with a specified set of parameters, 
+and measures the time to arrest for a cohort of fans. 
+The results are saved in a structured format for further analysis.
+
+
+Disclaimer: 
+AI may be used in with creating the code. 
+We checked the code on functionality, logic and correctness. 
+We are responsible for the code and its content.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -32,30 +37,34 @@ MAX_SPATIAL_WARMUP_STEPS = 2_000
 AGENT_DENSITY = 0.6
 GRID_N = 40
 
-COHORT_DTYPE = np.dtype([
-    ("cohort_id", np.int32),
-    ("arrest_step", np.int16),
-    ("is_respawn_at_start", np.bool_),
-    ("aggressiveness_at_start", np.float64),
-    ("is_home", np.bool_),
-])
+COHORT_DTYPE = np.dtype(
+    [
+        ("cohort_id", np.int32),
+        ("arrest_step", np.int16),
+        ("is_respawn_at_start", np.bool_),
+        ("aggressiveness_at_start", np.float64),
+        ("is_home", np.bool_),
+    ]
+)
 
-RUN_SUMMARY_DTYPE = np.dtype([
-    ("setup_id", np.int16),
-    ("setup_name", "U64"),
-    ("repeat", np.int16),
-    ("seed", np.int64),
-    ("valid", np.bool_),
-    ("failure_code", "U64"),
-    ("warmup_steps", np.int32),
-    ("cohort_size", np.int32),
-    ("arrested_count", np.int32),
-    ("not_arrested_count", np.int32),
-    ("arrest_fraction", np.float64),
-    ("mean_time_to_arrest", np.float64),
-    ("median_time_to_arrest", np.float64),
-    ("runtime_seconds", np.float64),
-])
+RUN_SUMMARY_DTYPE = np.dtype(
+    [
+        ("setup_id", np.int16),
+        ("setup_name", "U64"),
+        ("repeat", np.int16),
+        ("seed", np.int64),
+        ("valid", np.bool_),
+        ("failure_code", "U64"),
+        ("warmup_steps", np.int32),
+        ("cohort_size", np.int32),
+        ("arrested_count", np.int32),
+        ("not_arrested_count", np.int32),
+        ("arrest_fraction", np.float64),
+        ("mean_time_to_arrest", np.float64),
+        ("median_time_to_arrest", np.float64),
+        ("runtime_seconds", np.float64),
+    ]
+)
 
 
 def safe_name(value: str) -> str:
@@ -157,7 +166,12 @@ def run_one(job: tuple[int, dict, int, int, str]) -> tuple:
         model = RiotModel(segregation_params=segregation, riot_params=riot)
     except Exception as exc:
         return failed_summary(
-            setup_id, setup_name, repeat, seed, 0, started,
+            setup_id,
+            setup_name,
+            repeat,
+            seed,
+            0,
+            started,
             f"init:{type(exc).__name__}",
         )
 
@@ -168,13 +182,23 @@ def run_one(job: tuple[int, dict, int, int, str]) -> tuple:
             warmup_steps += 1
     except Exception as exc:
         return failed_summary(
-            setup_id, setup_name, repeat, seed, warmup_steps, started,
+            setup_id,
+            setup_name,
+            repeat,
+            seed,
+            warmup_steps,
+            started,
             f"warmup:{type(exc).__name__}",
         )
 
     if model.in_warmup:
         return failed_summary(
-            setup_id, setup_name, repeat, seed, warmup_steps, started,
+            setup_id,
+            setup_name,
+            repeat,
+            seed,
+            warmup_steps,
+            started,
             "warmup_not_converged",
         )
 
@@ -216,7 +240,12 @@ def run_one(job: tuple[int, dict, int, int, str]) -> tuple:
         )
     except Exception as exc:
         return failed_summary(
-            setup_id, setup_name, repeat, seed, warmup_steps, started,
+            setup_id,
+            setup_name,
+            repeat,
+            seed,
+            warmup_steps,
+            started,
             f"riot:{type(exc).__name__}",
         )
 
@@ -307,17 +336,13 @@ def main() -> None:
         "riot_burn_in_steps": RIOT_BURN_IN_STEPS,
         "measurement_steps": MEASUREMENT_STEPS,
         "setups": setups,
-        "fighting_series": (
-            "Number of fighting fans after each measurement step, saved per run."
-        ),
+        "fighting_series": ("Number of fighting fans after each measurement step, saved per run."),
         "cohort_rule": (
             "Only fans present at measurement start are included. "
             "Respawns created during measurement are excluded."
         ),
     }
-    (args.output_dir / "metadata.json").write_text(
-        json.dumps(metadata, indent=2), encoding="utf-8"
-    )
+    (args.output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
     print(
         f"Starting {len(jobs)} runs: {len(setups)} setups x "

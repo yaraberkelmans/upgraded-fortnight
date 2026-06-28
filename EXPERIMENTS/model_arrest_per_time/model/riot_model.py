@@ -41,8 +41,7 @@ def _box_sum(plane, radius, wrap):
         for dy in range(-radius, radius + 1):
             if dx == 0 and dy == 0:
                 continue
-            total += padded[radius + dx:radius + dx + N,
-                            radius + dy:radius + dy + N]
+            total += padded[radius + dx : radius + dx + N, radius + dy : radius + dy + N]
     return total
 
 
@@ -78,7 +77,6 @@ class RiotParams:
     aggressiveness_mean: float | None = None
     aggressiveness_concentration: float = 12.0
     fighting_enabled: bool = True
-
 
     def __post_init__(self):
         if isinstance(self.hawk_dove_strategy, str):
@@ -138,9 +136,7 @@ class RiotModel(Model):
         self.total_arrests = 0
         self.in_warmup = True
         self._last_entropy_fine = 0.0
-        self._warmup_entropy_fine_history = deque(
-            maxlen=self.segregation_params.warmup_window
-        )
+        self._warmup_entropy_fine_history = deque(maxlen=self.segregation_params.warmup_window)
 
         # Cached aggregate statistics, refreshed every tick by
         # _build_spatial_state(); the datacollector reporters read these.
@@ -345,9 +341,7 @@ class RiotModel(Model):
                 margin = fan.fight_want - fan.perceived_arrest_probability
                 x, y = fan.pos
                 enemy1 = (
-                    int(self._away1[x, y])
-                    if fan.group == FanGroup.HOME
-                    else int(self._home1[x, y])
+                    int(self._away1[x, y]) if fan.group == FanGroup.HOME else int(self._home1[x, y])
                 )
                 if enemy1 == 0 or margin <= threshold:
                     continue
@@ -407,7 +401,6 @@ class RiotModel(Model):
         for _ in range(steps):
             self.step()
 
-
     def count_group(self, group):
         return self._stat_home if group == FanGroup.HOME else self._stat_away
 
@@ -448,9 +441,8 @@ class RiotModel(Model):
             p_home = np.where(mask, home_z / np.where(mask, total_z, 1), 0.0)
             p_away = np.where(mask, away_z / np.where(mask, total_z, 1), 0.0)
 
-            entropy = (
-                -np.where(p_home > 0, p_home * np.log(p_home), 0.0)
-                - np.where(p_away > 0, p_away * np.log(p_away), 0.0)
+            entropy = -np.where(p_home > 0, p_home * np.log(p_home), 0.0) - np.where(
+                p_away > 0, p_away * np.log(p_away), 0.0
             )
 
         n_nonempty = mask.sum()

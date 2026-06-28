@@ -12,5 +12,8 @@ THE PLOTS CAN BE GENERETED WITH THE PLOT FILE
 RUN WITH:
 
 python .\EXPERIMENTS\model_arrest_per_time\plot_time_to_arrest.py --data-dir .\EXPERIMENTS\model_arrest_per_time\three_setup_data\ --output-dir PLOTS/distibution_of_arrest
+
+
+
 # Disclaimer
 Most of the experiment code here is written with instrictions by AI. 

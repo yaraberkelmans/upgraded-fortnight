@@ -56,8 +56,7 @@ class Citizen:
         cops = sum(isinstance(agent, Cop) for agent in neighbors)
 
         active_citizens = sum(
-            isinstance(agent, Citizen) and agent.state == CitizenState.ACTIVE
-            for agent in neighbors
+            isinstance(agent, Citizen) and agent.state == CitizenState.ACTIVE for agent in neighbors
         )
 
         # De agent telt zichzelf mee, zoals in de slides.
@@ -94,9 +93,7 @@ class Citizen:
             radius=self.model.params.citizen_vision,
         )
 
-        empty_positions = [
-            pos for pos in possible_positions if self.model.grid.is_cell_empty(pos)
-        ]
+        empty_positions = [pos for pos in possible_positions if self.model.grid.is_cell_empty(pos)]
 
         if empty_positions:
             new_pos = self.model.random.choice(empty_positions)
@@ -148,9 +145,7 @@ class Cop:
             radius=self.model.params.cop_vision,
         )
 
-        empty_positions = [
-            pos for pos in possible_positions if self.model.grid.is_cell_empty(pos)
-        ]
+        empty_positions = [pos for pos in possible_positions if self.model.grid.is_cell_empty(pos)]
 
         if empty_positions:
             new_pos = self.model.random.choice(empty_positions)
@@ -218,16 +213,12 @@ class CivilViolenceModel(Model):
         number_of_citizens = int(total_cells * self.params.citizen_density)
         number_of_cops = int(total_cells * self.params.cop_density)
 
-        all_positions = [
-            (x, y) for x in range(self.params.N) for y in range(self.params.N)
-        ]
+        all_positions = [(x, y) for x in range(self.params.N) for y in range(self.params.N)]
 
         self.random.shuffle(all_positions)
 
         citizen_positions = all_positions[:number_of_citizens]
-        cop_positions = all_positions[
-            number_of_citizens : number_of_citizens + number_of_cops
-        ]
+        cop_positions = all_positions[number_of_citizens : number_of_citizens + number_of_cops]
 
         for pos in citizen_positions:
             citizen = Citizen(self)

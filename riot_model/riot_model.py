@@ -1,4 +1,10 @@
-"""Main Mesa riot model. Agent implementations live in fan.py and police.py."""
+"""
+DATE: 28-6-2026
+NAMES: Ruben, Mark, Yara, Max
+
+Description: Main RIOT model. Contains the RiotModel class, which is a Mesa model that simulates the behavior of fans and police in a grid environment. The model includes parameters for segregation and riot dynamics, and collects various metrics during the simulation.
+Disclaimer: AI may be used in with creating the code. We checked the code on functionality, logic and correctness. We are responsible for the code and its content.
+"""
 
 import random
 import math
@@ -8,6 +14,7 @@ from mesa import Model
 from mesa.datacollection import DataCollector
 from mesa.space import SingleGrid
 
+## YOU KNOW WE ARE FLEXIBLE. WE CAN IMPORT FROM RIOT_MODEL OR FROM THE LOCAL FILES. DEPENDING ON WHERE WE ARE RUNNING THIS SCRIPT.
 try:
     from riot_model.fan import Fan, FanGroup, HawkDoveStrategy
     from riot_model.police import Police
@@ -51,10 +58,7 @@ class RiotParams:
     def __post_init__(self):
         if isinstance(self.hawk_dove_strategy, str):
             self.hawk_dove_strategy = HawkDoveStrategy(self.hawk_dove_strategy)
-        if (
-            self.aggressiveness_mean is not None
-            and not 0.0 <= self.aggressiveness_mean <= 1.0
-        ):
+        if self.aggressiveness_mean is not None and not 0.0 <= self.aggressiveness_mean <= 1.0:
             raise ValueError("aggressiveness_mean must be between 0 and 1")
         if self.aggressiveness_concentration <= 0:
             raise ValueError("aggressiveness_concentration must be greater than 0")
@@ -80,9 +84,7 @@ class RiotModel(Model):
         riot_keys = set(RiotParams.__dataclass_fields__.keys())
 
         if segregation_params is None:
-            segregation_filtered = {
-                k: v for k, v in kwargs.items() if k in segregation_keys
-            }
+            segregation_filtered = {k: v for k, v in kwargs.items() if k in segregation_keys}
             self.segregation_params = SegregationParams(**segregation_filtered)
         else:
             self.segregation_params = segregation_params
@@ -161,9 +163,7 @@ class RiotModel(Model):
         if required_positions > len(all_positions):
             raise ValueError("Agent and police densities exceed available grid cells")
 
-        agent_groups = [FanGroup.HOME] * number_of_home + [
-            FanGroup.AWAY
-        ] * number_of_away
+        agent_groups = [FanGroup.HOME] * number_of_home + [FanGroup.AWAY] * number_of_away
         self.random.shuffle(agent_groups)
 
         for pos, group in zip(all_positions[:number_of_agents], agent_groups):
@@ -325,9 +325,7 @@ class RiotModel(Model):
         return self._cv(window)
 
     def entropy_cv_fine(self):
-        window = self._warmup_entropy_fine_history[
-            -self.segregation_params.warmup_window :
-        ]
+        window = self._warmup_entropy_fine_history[-self.segregation_params.warmup_window :]
         return self._cv(window)
 
     def average_last_move_distance(self):
@@ -354,9 +352,7 @@ class RiotModel(Model):
     def average_perceived_arrest_probability(self):
         if not self.fans:
             return 0.0
-        return sum(fan.perceived_arrest_probability for fan in self.fans) / len(
-            self.fans
-        )
+        return sum(fan.perceived_arrest_probability for fan in self.fans) / len(self.fans)
 
     @property
     def params(self):

@@ -1,4 +1,10 @@
-"""Fan agent and fan-related enums for the riot model."""
+"""
+DATE: 28-6-2026
+NAMES: Ruben, Mark, Yara, Max
+
+Description: Fan agent for the riot model. Contains the Fan class, which represents a fan in the simulation. The Fan class includes methods for deciding happiness, fighting behavior, and movement based on local neighborhood conditions and model parameters.
+Disclaimer: AI may be used in with creating the code. We checked the code on functionality, logic and correctness. We are responsible for the code and its content.
+"""
 
 import math
 from enum import Enum
@@ -51,22 +57,16 @@ class Fan:
         neighbors = self.model.grid.get_neighbors(
             self.pos, moore=True, include_center=False, radius=1
         )
-        same = sum(
-            isinstance(agent, Fan) and agent.group == self.group for agent in neighbors
-        )
+        same = sum(isinstance(agent, Fan) and agent.group == self.group for agent in neighbors)
 
         denominator = (
-            8
-            if self.model.segregation_params.count_empty_as_different
-            else len(neighbors)
+            8 if self.model.segregation_params.count_empty_as_different else len(neighbors)
         )
         return 1.0 if denominator == 0 else same / denominator
 
     def decide_happiness(self):
         self.same_fraction = self.calculate_same_fraction()
-        self.happy = (
-            self.same_fraction >= self.model.segregation_params.similarity_threshold
-        )
+        self.happy = self.same_fraction >= self.model.segregation_params.similarity_threshold
         return self.happy
 
     def _hawk_dove_play(self, opponent):
@@ -101,9 +101,7 @@ class Fan:
             self.pos, moore=True, include_center=False, radius=1
         )
         opposing_fans = [
-            agent
-            for agent in neighbors
-            if isinstance(agent, Fan) and agent.group != self.group
+            agent for agent in neighbors if isinstance(agent, Fan) and agent.group != self.group
         ]
 
         self.fight_want = self.aggressiveness * self.perceived_win_probability
@@ -147,9 +145,7 @@ class Fan:
         friends_including_self = self.friend_fans + 1
         total_fans_including_self = self.friend_fans + self.enemy_fans + 1
         k = self.model.riot_params.perception_k
-        self.perceived_win_probability = math.exp(
-            -k * (self.enemy_fans / friends_including_self)
-        )
+        self.perceived_win_probability = math.exp(-k * (self.enemy_fans / friends_including_self))
         self.perceived_arrest_probability = 1 - math.exp(
             -k * (5 * cops_in_view / total_fans_including_self)
         )

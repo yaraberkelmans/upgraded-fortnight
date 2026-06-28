@@ -64,9 +64,7 @@ class Police:
             empty_positions = list(grid.empties)
             if not empty_positions:
                 return None
-            weights = [
-                math.exp(-decay * self.torus_distance(pos)) for pos in empty_positions
-            ]
+            weights = [math.exp(-decay * self.torus_distance(pos)) for pos in empty_positions]
             return self.random.choices(empty_positions, weights=weights, k=1)[0]
 
         return self.random.choices(positions, weights=weights, k=1)[0]
@@ -115,8 +113,7 @@ class Police:
             new_pos = self.model.random.choice(empty_positions)
             group = (
                 FanGroup.HOME
-                if self.model.random.random()
-                < self.model.segregation_params.home_fraction
+                if self.model.random.random() < self.model.segregation_params.home_fraction
                 else FanGroup.AWAY
             )
             new_fan = Fan(self.model, group, is_respawn=True)
@@ -135,9 +132,7 @@ class Police:
             include_center=False,
             radius=self.model.riot_params.police_vision,
         )
-        fighting_fans = [
-            agent for agent in neighbors if isinstance(agent, Fan) and agent.fighting
-        ]
+        fighting_fans = [agent for agent in neighbors if isinstance(agent, Fan) and agent.fighting]
         if not fighting_fans:
             self.move()
             return

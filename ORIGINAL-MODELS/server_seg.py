@@ -1,3 +1,11 @@
+"""
+DATE: 28-6-2026
+NAMES: Ruben, Mark, Yara, Max
+
+Description: Visualization for the segregation model. Contains the SolaraViz page that allows users to interactively explore the segregation model by adjusting parameters and visualizing the results in real-time.
+Disclaimer: AI may be used in with creating the code. We checked the code on functionality, logic and correctness. We are responsible for the code and its content.
+"""
+
 from mesa.visualization import SolaraViz, SpaceRenderer, make_plot_component
 from mesa.visualization.components import AgentPortrayalStyle
 
@@ -31,9 +39,7 @@ def post_process(ax):
 # create an initial model instance
 initial_model = SegregationModel()
 
-renderer = SpaceRenderer(initial_model, backend="matplotlib").setup_agents(
-    agent_portrayal
-)
+renderer = SpaceRenderer(initial_model, backend="matplotlib").setup_agents(agent_portrayal)
 renderer.draw_agents()
 renderer.post_process = post_process
 

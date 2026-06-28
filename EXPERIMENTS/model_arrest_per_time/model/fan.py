@@ -10,10 +10,9 @@ class FanGroup(Enum):
 
 
 class HawkDoveStrategy(Enum):
-    NASH_ESS = "nash_ess"        # deterministic: p = V/C
+    NASH_ESS = "nash_ess"  # deterministic: p = V/C
     LOGIT_PRIOR = "logit_prior"  # logit QRE assuming opponent plays hawk with q=0.5
-    LOGIT_QRE = "logit_qre"      # logit QRE: q estimated from local proportion, C stays
-
+    LOGIT_QRE = "logit_qre"  # logit QRE: q estimated from local proportion, C stays
 
 
 class Fan:
@@ -54,14 +53,9 @@ class Fan:
         return max(dx, dy)
 
     def calculate_same_fraction(self, neighbors):
-        same = sum(
-            isinstance(agent, Fan) and agent.group == self.group
-            for agent in neighbors
-        )
+        same = sum(isinstance(agent, Fan) and agent.group == self.group for agent in neighbors)
         denominator = (
-            8
-            if self.model.segregation_params.count_empty_as_different
-            else len(neighbors)
+            8 if self.model.segregation_params.count_empty_as_different else len(neighbors)
         )
         return 1.0 if denominator == 0 else same / denominator
 
@@ -71,10 +65,7 @@ class Fan:
                 self.pos, moore=True, include_center=False, radius=1
             )
         self.same_fraction = self.calculate_same_fraction(neighbors)
-        self.happy = (
-            self.same_fraction
-            >= self.model.segregation_params.similarity_threshold
-        )
+        self.happy = self.same_fraction >= self.model.segregation_params.similarity_threshold
         return self.happy
 
     def set_happiness_from_counts(self, same_count, total_agents):
@@ -89,10 +80,7 @@ class Fan:
         else:
             denominator = total_agents
         self.same_fraction = 1.0 if denominator == 0 else same_count / denominator
-        self.happy = (
-            self.same_fraction
-            >= self.model.segregation_params.similarity_threshold
-        )
+        self.happy = self.same_fraction >= self.model.segregation_params.similarity_threshold
         return self.happy
 
     def _hawk_dove_play(self, opponent):
@@ -128,18 +116,13 @@ class Fan:
                 self.pos, moore=True, include_center=False, radius=1
             )
         opposing_fans = [
-            agent
-            for agent in neighbors
-            if isinstance(agent, Fan) and agent.group != self.group
+            agent for agent in neighbors if isinstance(agent, Fan) and agent.group != self.group
         ]
 
         self.fight_want = self.aggressiveness * self.perceived_win_probability
         fight_margin = self.fight_want - self.perceived_arrest_probability
 
-        if (
-            not opposing_fans
-            or fight_margin <= self.model.riot_params.fight_threshold
-        ):
+        if not opposing_fans or fight_margin <= self.model.riot_params.fight_threshold:
             return self.fighting
 
         opponent = self.random.choice(opposing_fans)
@@ -166,9 +149,7 @@ class Fan:
         friends_including_self = friend + 1
         total_fans_including_self = friend + enemy + 1
         k = self.model.riot_params.perception_k
-        self.perceived_win_probability = math.exp(
-            -k * (enemy / friends_including_self)
-        )
+        self.perceived_win_probability = math.exp(-k * (enemy / friends_including_self))
         self.perceived_arrest_probability = 1 - math.exp(
             -k * (5 * cops / total_fans_including_self)
         )

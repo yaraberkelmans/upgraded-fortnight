@@ -3,6 +3,7 @@
 import math
 from .fan import Fan, FanGroup
 
+
 class Police:
     """Police agent that pursues and arrests fighting fans."""
 
@@ -103,7 +104,11 @@ class Police:
         empty_positions = list(self.model.grid.empties)
         if empty_positions:
             new_pos = self.model.random.choice(empty_positions)
-            group = FanGroup.HOME if self.model.random.random() < self.model.segregation_params.home_fraction else FanGroup.AWAY
+            group = (
+                FanGroup.HOME
+                if self.model.random.random() < self.model.segregation_params.home_fraction
+                else FanGroup.AWAY
+            )
             new_fan = Fan(self.model, group, is_respawn=True)
             self.model.fans.append(new_fan)
             self.model.grid.place_agent(new_fan, new_pos)
@@ -120,11 +125,7 @@ class Police:
             include_center=False,
             radius=self.model.riot_params.police_vision,
         )
-        fighting_fans = [
-            agent
-            for agent in neighbors
-            if isinstance(agent, Fan) and agent.fighting
-        ]
+        fighting_fans = [agent for agent in neighbors if isinstance(agent, Fan) and agent.fighting]
         if not fighting_fans:
             self.move()
             return

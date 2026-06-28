@@ -54,13 +54,9 @@ class Fan:
         return max(dx, dy)
 
     def calculate_same_fraction(self, neighbors):
-        same = sum(
-            isinstance(agent, Fan) and agent.group == self.group for agent in neighbors
-        )
+        same = sum(isinstance(agent, Fan) and agent.group == self.group for agent in neighbors)
         denominator = (
-            8
-            if self.model.segregation_params.count_empty_as_different
-            else len(neighbors)
+            8 if self.model.segregation_params.count_empty_as_different else len(neighbors)
         )
         return 1.0 if denominator == 0 else same / denominator
 
@@ -70,9 +66,7 @@ class Fan:
                 self.pos, moore=True, include_center=False, radius=1
             )
         self.same_fraction = self.calculate_same_fraction(neighbors)
-        self.happy = (
-            self.same_fraction >= self.model.segregation_params.similarity_threshold
-        )
+        self.happy = self.same_fraction >= self.model.segregation_params.similarity_threshold
         return self.happy
 
     def set_happiness_from_counts(self, same_count, total_agents):
@@ -87,9 +81,7 @@ class Fan:
         else:
             denominator = total_agents
         self.same_fraction = 1.0 if denominator == 0 else same_count / denominator
-        self.happy = (
-            self.same_fraction >= self.model.segregation_params.similarity_threshold
-        )
+        self.happy = self.same_fraction >= self.model.segregation_params.similarity_threshold
         return self.happy
 
     def _hawk_dove_play(self, opponent):
@@ -125,9 +117,7 @@ class Fan:
                 self.pos, moore=True, include_center=False, radius=1
             )
         opposing_fans = [
-            agent
-            for agent in neighbors
-            if isinstance(agent, Fan) and agent.group != self.group
+            agent for agent in neighbors if isinstance(agent, Fan) and agent.group != self.group
         ]
 
         self.fight_want = self.aggressiveness * self.perceived_win_probability
@@ -224,9 +214,7 @@ class Fan:
             empty_positions = list(grid.empties)
             if not empty_positions:
                 return None
-            weights = [
-                math.exp(-decay * self.torus_distance(pos)) for pos in empty_positions
-            ]
+            weights = [math.exp(-decay * self.torus_distance(pos)) for pos in empty_positions]
             return self.random.choices(empty_positions, weights=weights, k=1)[0]
 
         return self.random.choices(positions, weights=weights, k=1)[0]

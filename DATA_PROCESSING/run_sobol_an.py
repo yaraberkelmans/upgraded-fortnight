@@ -16,6 +16,7 @@ import os
 
 import numpy as np
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from SALib.analyze import sobol
@@ -24,7 +25,12 @@ QOIS = ["mean_fighting_fraction", "mean_arrests_per_step", "mean_spatial_entropy
 
 FALLBACK_PROBLEM = {
     "num_vars": 4,
-    "names": ["similarity_threshold", "fight_threshold", "hawk_dove_C", "police_density"],
+    "names": [
+        "similarity_threshold",
+        "fight_threshold",
+        "hawk_dove_C",
+        "police_density",
+    ],
     "bounds": [[0.05, 0.90], [-0.35, 0.45], [0.10, 19.00], [0.01, 0.15]],
 }
 
@@ -41,8 +47,11 @@ def load_problem(seed_dirs):
         meta = os.path.join(d, "metadata.json")
         if os.path.exists(meta):
             p = json.load(open(meta))["problem"]
-            return {"num_vars": int(p["num_vars"]), "names": list(p["names"]),
-                    "bounds": [list(b) for b in p["bounds"]]}
+            return {
+                "num_vars": int(p["num_vars"]),
+                "names": list(p["names"]),
+                "bounds": [list(b) for b in p["bounds"]],
+            }
     return FALLBACK_PROBLEM
 
 
@@ -85,8 +94,7 @@ def main():
     seed_dirs = find_seed_dirs(args.data_dir)
     if not seed_dirs:
         raise SystemExit(f"no run_results.npy under {args.data_dir}")
-    results = [np.load(os.path.join(d, "run_results.npy"), allow_pickle=False)
-               for d in seed_dirs]
+    results = [np.load(os.path.join(d, "run_results.npy"), allow_pickle=False) for d in seed_dirs]
 
     problem = load_problem(seed_dirs)
     names = problem["names"]
@@ -100,24 +108,47 @@ def main():
         Y = np.nanmean(stack, axis=0)
         res = sobol.analyze(problem, Y, calc_second_order=second, print_to_console=False)
 
-        st_seeds = np.array([
-            sobol.analyze(problem, stack[s], calc_second_order=second,
-                          print_to_console=False)["ST"]
-            for s in range(len(results))
-        ])
+        st_seeds = np.array(
+            [
+                sobol.analyze(problem, stack[s], calc_second_order=second, print_to_console=False)[
+                    "ST"
+                ]
+                for s in range(len(results))
+            ]
+        )
 
-        x = np.arange(D); w = 0.38
+        x = np.arange(D)
+        w = 0.38
         fig, ax = plt.subplots(figsize=(8, 4.5))
-        ax.bar(x - w / 2, res["S1"], w, yerr=res["S1_conf"], capsize=3, label="S1", color="#79c")
-        ax.bar(x + w / 2, res["ST"], w, yerr=res["ST_conf"], capsize=3, label="ST", color="#e89")
+        ax.bar(
+            x - w / 2,
+            res["S1"],
+            w,
+            yerr=res["S1_conf"],
+            capsize=3,
+            label="S1",
+            color="#79c",
+        )
+        ax.bar(
+            x + w / 2,
+            res["ST"],
+            w,
+            yerr=res["ST_conf"],
+            capsize=3,
+            label="ST",
+            color="#e89",
+        )
         for s in range(st_seeds.shape[0]):
             ax.scatter(x + w / 2, st_seeds[s], s=14, color="k", alpha=0.5, zorder=3)
         ax.axhline(0, color="0.6", lw=0.8)
-        ax.set_xticks(x); ax.set_xticklabels(names, rotation=20, ha="right")
+        ax.set_xticks(x)
+        ax.set_xticklabels(names, rotation=20, ha="right")
         ax.set_ylabel("Sobol index")
         ax.set_title(f"{q}  (sum S1={res['S1'].sum():.2f})")
         ax.legend(title="bars: bootstrap CI | dots: per-seed ST")
-        fig.tight_layout(); fig.savefig(os.path.join(out_dir, f"sobol_{q}.png"), dpi=140); plt.close(fig)
+        fig.tight_layout()
+        fig.savefig(os.path.join(out_dir, f"sobol_{q}.png"), dpi=140)
+        plt.close(fig)
 
         fig, axs = plt.subplots(1, D, figsize=(4 * D, 3.6), sharey=True)
         for j, name in enumerate(names):
@@ -130,9 +161,13 @@ def main():
             axs[j].set_xlabel(name)
             axs[j].set_title(f"$R^2$={r2:.2f}", fontsize=10)
         axs[0].set_ylabel(q)
-        fig.suptitle(f"{q} vs parameters (seed-averaged; orange = binned mean, "
-                     f"$R^2$ = variance explained by binned mean)")
-        fig.tight_layout(); fig.savefig(os.path.join(out_dir, f"scatter_{q}.png"), dpi=140); plt.close(fig)
+        fig.suptitle(
+            f"{q} vs parameters (seed-averaged; orange = binned mean, "
+            f"$R^2$ = variance explained by binned mean)"
+        )
+        fig.tight_layout()
+        fig.savefig(os.path.join(out_dir, f"scatter_{q}.png"), dpi=140)
+        plt.close(fig)
 
     print(f"Wrote plots to {out_dir}")
 

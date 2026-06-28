@@ -38,9 +38,7 @@ def post_process(ax):
 
 
 initial_model = RiotModel()
-renderer = SpaceRenderer(initial_model, backend="matplotlib").setup_agents(
-    agent_portrayal
-)
+renderer = SpaceRenderer(initial_model, backend="matplotlib").setup_agents(agent_portrayal)
 renderer.draw_agents()
 renderer.post_process = post_process
 

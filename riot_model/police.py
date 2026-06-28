@@ -1,4 +1,10 @@
-"""Police agent for the riot model."""
+"""
+DATE: 28-6-2026
+NAMES: Ruben, Mark, Yara, Max
+
+Description: Police agent for the riot model.
+Disclaimer: AI may be used in with creating the code. We checked the code on functionality, logic and correctness. We are responsible for the code and its content.
+"""
 
 import math
 
@@ -8,6 +14,7 @@ except ImportError:
     from fan import Fan, FanGroup
 
 
+## SMALLEST CLASS!
 class Police:
     """Police agent that pursues and arrests fighting fans."""
 
@@ -87,9 +94,7 @@ class Police:
             include_center=False,
             radius=self.model.riot_params.police_vision,
         )
-        fighting_fans = [
-            agent for agent in neighbors if isinstance(agent, Fan) and agent.fighting
-        ]
+        fighting_fans = [agent for agent in neighbors if isinstance(agent, Fan) and agent.fighting]
         if not fighting_fans:
             self.move()
             return

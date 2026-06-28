@@ -52,8 +52,7 @@ class Household:
         )
 
         same = sum(
-            isinstance(agent, Household) and agent.group == self.group
-            for agent in neighbors
+            isinstance(agent, Household) and agent.group == self.group for agent in neighbors
         )
 
         if self.model.params.count_empty_as_different:
@@ -91,9 +90,7 @@ class Household:
             return max(dx, dy)
 
         min_distance = min(torus_distance(pos) for pos in empty_positions)
-        nearest_positions = [
-            pos for pos in empty_positions if torus_distance(pos) == min_distance
-        ]
+        nearest_positions = [pos for pos in empty_positions if torus_distance(pos) == min_distance]
         return self.random.choice(nearest_positions)
 
     def move_if_unhappy(self):
@@ -166,9 +163,7 @@ class SegregationModel(Model):
         number_of_red = int(number_of_agents * self.params.red_fraction)
         number_of_green = number_of_agents - number_of_red
 
-        all_positions = [
-            (x, y) for x in range(self.params.N) for y in range(self.params.N)
-        ]
+        all_positions = [(x, y) for x in range(self.params.N) for y in range(self.params.N)]
         self.random.shuffle(all_positions)
 
         agent_groups = [Group.RED] * number_of_red + [Group.GREEN] * number_of_green

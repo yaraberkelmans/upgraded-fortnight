@@ -1,4 +1,12 @@
-"""Create histogram and point plots for the three similarity-threshold setups."""
+"""
+DATE: 28-6-2026
+NAMES: Ruben, Mark, Yara, Max
+
+Description: Create histogram and point plots for the three similarity-threshold setups. The plots visualize the time to arrest for agents present at measurement start, mean time to arrest, arrest fraction, and non-arrested count per run. Additionally, the mean number of fighting fans over time is plotted with ±1 standard deviation.
+Disclaimer: AI may be used in with creating the code. We checked the code on functionality, logic and correctness. We are responsible for the code and its content.
+"""
+
+
 from __future__ import annotations
 
 import argparse
@@ -24,7 +32,9 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_setup(paths: list[Path]) -> tuple[list[np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
+def load_setup(
+    paths: list[Path],
+) -> tuple[list[np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
     """Return arrest times, mean TTA, arrest fraction, and non-arrest count per run."""
     times_per_run: list[np.ndarray] = []
     mean_tta = []
@@ -48,16 +58,13 @@ def load_setup(paths: list[Path]) -> tuple[list[np.ndarray], np.ndarray, np.ndar
     )
 
 
-
 def load_fighting_series(paths: list[Path]) -> np.ndarray:
     """Load per-run fighting counts into shape (runs, measurement_steps)."""
     series = []
     for path in paths:
         values = np.load(path, allow_pickle=False).astype(float)
         if values.ndim != 1 or len(values) != MEASUREMENT_STEPS:
-            raise ValueError(
-                f"Unexpected fighting series shape in {path}: {values.shape}"
-            )
+            raise ValueError(f"Unexpected fighting series shape in {path}: {values.shape}")
         series.append(values)
     if not series:
         return np.empty((0, MEASUREMENT_STEPS), dtype=float)
@@ -97,6 +104,7 @@ def plot_mean_fighting_over_time(
     fig.savefig(output_path, dpi=220)
     plt.close(fig)
 
+
 def threshold_label(setup: dict) -> str:
     return f"{setup['name'].replace('_', ' ')}\nthreshold={setup['similarity_threshold']:.2f}"
 
@@ -123,11 +131,11 @@ def plot_histograms(
             if any(x.size for x in times_per_run)
             else np.array([], dtype=int)
         )
-        total_starting_agents = int(
-            sum(len(x) for x in times_per_run) + np.sum(not_arrested_count)
-        )
+        total_starting_agents = int(sum(len(x) for x in times_per_run) + np.sum(not_arrested_count))
         arrested_count = int(pooled.size)
-        included_pct = (100.0 * arrested_count / total_starting_agents) if total_starting_agents else 0.0
+        included_pct = (
+            (100.0 * arrested_count / total_starting_agents) if total_starting_agents else 0.0
+        )
         not_arrested_pct = 100.0 - included_pct if total_starting_agents else 0.0
 
         weights = (
@@ -249,9 +257,7 @@ def main() -> None:
             continue
 
         times_per_run, mean_tta, arrest_fraction, not_arrested_count = load_setup(paths)
-        fighting_paths = sorted(
-            (args.data_dir / "fighting" / name).glob("fighting_*.npy")
-        )
+        fighting_paths = sorted((args.data_dir / "fighting" / name).glob("fighting_*.npy"))
         fighting_series = load_fighting_series(fighting_paths)
         setups.append(setup)
         histogram_data.append((setup, times_per_run, arrest_fraction, not_arrested_count))
@@ -260,7 +266,11 @@ def main() -> None:
         not_arrested_count_by_setup.append(not_arrested_count)
         fighting_by_setup.append(fighting_series)
 
-        pooled = np.concatenate([x for x in times_per_run if x.size]) if any(x.size for x in times_per_run) else np.array([], dtype=int)
+        pooled = (
+            np.concatenate([x for x in times_per_run if x.size])
+            if any(x.size for x in times_per_run)
+            else np.array([], dtype=int)
+        )
         export[f"{name}__pooled_arrest_steps"] = pooled
         export[f"{name}__mean_tta_per_run"] = mean_tta
         export[f"{name}__arrest_fraction_per_run"] = arrest_fraction
@@ -312,7 +322,7 @@ def main() -> None:
         setups, mean_tta_by_setup, arrest_fraction_by_setup, not_arrested_count_by_setup
     ):
         finite_tta = mean_tta[np.isfinite(mean_tta)]
-        mean_tta_value = float(np.mean(finite_tta)) if finite_tta.size else float('nan')
+        mean_tta_value = float(np.mean(finite_tta)) if finite_tta.size else float("nan")
         print(
             f"  threshold={setup['similarity_threshold']:.2f}: "
             f"runs={len(mean_tta)}, "

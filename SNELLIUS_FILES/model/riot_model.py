@@ -32,9 +32,7 @@ def _box_sum(plane, radius, wrap):
         for dy in range(-radius, radius + 1):
             if dx == 0 and dy == 0:
                 continue
-            total += padded[
-                radius + dx : radius + dx + N, radius + dy : radius + dy + N
-            ]
+            total += padded[radius + dx : radius + dx + N, radius + dy : radius + dy + N]
     return total
 
 
@@ -74,10 +72,7 @@ class RiotParams:
     def __post_init__(self):
         if isinstance(self.hawk_dove_strategy, str):
             self.hawk_dove_strategy = HawkDoveStrategy(self.hawk_dove_strategy)
-        if (
-            self.aggressiveness_mean is not None
-            and not 0.0 <= self.aggressiveness_mean <= 1.0
-        ):
+        if self.aggressiveness_mean is not None and not 0.0 <= self.aggressiveness_mean <= 1.0:
             raise ValueError("aggressiveness_mean must be between 0 and 1")
         if self.aggressiveness_concentration <= 0:
             raise ValueError("aggressiveness_concentration must be greater than 0")
@@ -103,9 +98,7 @@ class RiotModel(Model):
         riot_keys = set(RiotParams.__dataclass_fields__.keys())
 
         if segregation_params is None:
-            segregation_filtered = {
-                k: v for k, v in kwargs.items() if k in segregation_keys
-            }
+            segregation_filtered = {k: v for k, v in kwargs.items() if k in segregation_keys}
             self.segregation_params = SegregationParams(**segregation_filtered)
         else:
             self.segregation_params = segregation_params
@@ -134,9 +127,7 @@ class RiotModel(Model):
         self.total_arrests = 0
         self.in_warmup = True
         self._last_entropy_fine = 0.0
-        self._warmup_entropy_fine_history = deque(
-            maxlen=self.segregation_params.warmup_window
-        )
+        self._warmup_entropy_fine_history = deque(maxlen=self.segregation_params.warmup_window)
 
         # Cached aggregate statistics, refreshed every tick by
         # _build_spatial_state(); the datacollector reporters read these.
@@ -205,9 +196,7 @@ class RiotModel(Model):
         if required_positions > len(all_positions):
             raise ValueError("Agent and police densities exceed available grid cells")
 
-        agent_groups = [FanGroup.HOME] * number_of_home + [
-            FanGroup.AWAY
-        ] * number_of_away
+        agent_groups = [FanGroup.HOME] * number_of_home + [FanGroup.AWAY] * number_of_away
         self.random.shuffle(agent_groups)
 
         for pos, group in zip(all_positions[:number_of_agents], agent_groups):
@@ -344,9 +333,7 @@ class RiotModel(Model):
                 margin = fan.fight_want - fan.perceived_arrest_probability
                 x, y = fan.pos
                 enemy1 = (
-                    int(self._away1[x, y])
-                    if fan.group == FanGroup.HOME
-                    else int(self._home1[x, y])
+                    int(self._away1[x, y]) if fan.group == FanGroup.HOME else int(self._home1[x, y])
                 )
                 if enemy1 == 0 or margin <= threshold:
                     continue
