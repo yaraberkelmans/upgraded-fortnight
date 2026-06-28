@@ -1,7 +1,7 @@
 [
   {
     "name": "low_similarity_threshold",
-    "similarity_threshold": 0.1,
+    "similarity_threshold": 0.3,
     "fight_threshold": 0.05,
     "hawk_dove_C": 5.0,
     "police_density": 0.04,
@@ -9,7 +9,7 @@
   },
   {
     "name": "medium_similarity_threshold",
-    "similarity_threshold": 0.2,
+    "similarity_threshold": 0.5,
     "fight_threshold": 0.05,
     "hawk_dove_C": 5.0,
     "police_density": 0.04,
@@ -17,7 +17,7 @@
   },
   {
     "name": "high_similarity_threshold",
-    "similarity_threshold": 0.4,
+    "similarity_threshold": 0.7,
     "fight_threshold": 0.05,
     "hawk_dove_C": 5.0,
     "police_density": 0.04,
