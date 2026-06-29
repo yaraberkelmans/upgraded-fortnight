@@ -1,13 +1,12 @@
 # ABM - Group 5
 ## Yara, Max, Mark and Ruben
-
-In this repository, we present the code and project report for the research we conducted into football riots. Based on the research question of which method works best to mitigate football riots, we developed a model based on the original Schelling and Epstein models. We also added a logit-based game to the model.
+In this repository, we present the code and project report for the research we conducted on football riots. Based on the research question of which method works best to mitigate football riots, we developed a model based on the original Schelling and Epstein models. We also added a logit-based game to the model.
 
 This README explains the file structure and how to run the simulations.
 
-This project was carried out for the Agent-Based Modelling course at the University of Amsterdam in 2026.
+This project was carried out for the Agent-Based-Modelling course at the University of Amsterdam in 2026.
 
-If you want to run all plots script you need to have the data. This is available after emailing: ruben.lanjouw14@gmail.com the zip file is not on git because of it size (530mb zipped).
+To run all plotting scripts, you need access to the data. The data is available upon request by emailing: ruben.lanjouw14@gmail.com. The ZIP file is not included on GitHub because of its size (530 MB compressed).
 
 ## How to run it.
 ### Step 1. Setup Venv
