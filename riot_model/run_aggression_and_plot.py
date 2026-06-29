@@ -1,10 +1,3 @@
-"""
-DATE: 28-6-2026
-NAMES: Ruben, Mark, Yara, Max
-
-Description: Runs a parameter sweep for a single parameter and plots the results. The parameter to sweep is specified in the Config class at the top of this file.
-Disclaimer: AI may be used in with creating the code. We checked the code on functionality, logic and correctness. We are responsible for the code and its content.
-"""
 
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -14,29 +7,30 @@ import matplotlib.pyplot as plt
 
 from riot_model import RiotModel, RiotParams, SegregationParams
 
-
 @dataclass
 class Config:
-    # The to sweep param.
+    # Welke parameter wil je onderzoeken?
     sweep_parameter: str = "home_fraction"
 
-    # other values
+    # Waarden van de sweep.
     sweep_start: float = 0.0
-    sweep_stop: float = 1
-    sweep_step: float = 0.1
+    sweep_stop: float = 1.00
+    sweep_step: float = 0.2
 
     repetitions: int = 3
-    model_steps: int = 20
+    model_steps: int = 100
     base_seed: int = 42
 
-    # fixed
+    # Vaste segregatieparameters.
     N: int = 40
-    agent_density: float = 0.60
+    agent_density: float = 0.80
     home_fraction: float = 0.50
     similarity_threshold: float = 0.30
     movement_decay: float = 1.0
     torus: bool = True
     count_empty_as_different: bool = True
+
+    # Vaste riotparameters.
     police_density: float = 0.05
     perception_k: float = 0.693
     fan_vision: int = 2
@@ -45,16 +39,22 @@ class Config:
     hawk_dove_C: float = 4.0
     aggressiveness_mean: float | None = None
     aggressiveness_concentration: float = 12.0
-    output_dir: str = "./"
+
+    output_dir: str = "data/"
 
 
 CFG = Config()
 
-## NO NEED TO ADJUST ANYTHING BELOW. ALREADY NICE.
 
-SEGREGATION_FIELDS = {field.name: field.type for field in fields(SegregationParams)}
+SEGREGATION_FIELDS = {
+    field.name: field.type
+    for field in fields(SegregationParams)
+}
 
-RIOT_FIELDS = {field.name: field.type for field in fields(RiotParams)}
+RIOT_FIELDS = {
+    field.name: field.type
+    for field in fields(RiotParams)
+}
 
 INTEGER_PARAMETERS = {
     "N",
@@ -122,9 +122,12 @@ def build_params(sweep_value, seed):
     elif CFG.sweep_parameter in riot_kwargs:
         riot_kwargs[CFG.sweep_parameter] = value
     else:
-        valid = sorted(set(segregation_kwargs) | set(riot_kwargs))
+        valid = sorted(
+            set(segregation_kwargs) | set(riot_kwargs)
+        )
         raise ValueError(
-            f"Onbekende sweep_parameter: {CFG.sweep_parameter}\n" f"Kies uit: {', '.join(valid)}"
+            f"Onbekende sweep_parameter: {CFG.sweep_parameter}\n"
+            f"Kies uit: {', '.join(valid)}"
         )
 
     return (
@@ -156,18 +159,19 @@ def run_experiment():
 
             remaining_fans = len(model.fans)
 
-            rows.append(
-                {
-                    "repetition": repetition,
-                    "seed": seed,
-                    "parameter": CFG.sweep_parameter,
-                    "parameter_value": cast_sweep_value(raw_value),
-                    "total_arrests": total_arrests,
-                    "initial_fans": initial_fans,
-                    "remaining_fans": remaining_fans,
-                    "arrest_fraction": (total_arrests / initial_fans if initial_fans else 0.0),
-                }
-            )
+            rows.append({
+                "repetition": repetition,
+                "seed": seed,
+                "parameter": CFG.sweep_parameter,
+                "parameter_value": cast_sweep_value(raw_value),
+                "total_arrests": total_arrests,
+                "initial_fans": initial_fans,
+                "remaining_fans": remaining_fans,
+                "arrest_fraction": (
+                    total_arrests / initial_fans
+                    if initial_fans else 0.0
+                ),
+            })
 
             print(
                 f"run={repetition} "
@@ -180,7 +184,6 @@ def run_experiment():
 
 
 def make_plots(df, output_dir):
-    ## LETS GOO PLOTTING!!!
     plots_dir = output_dir / "plots"
     plots_dir.mkdir(parents=True, exist_ok=True)
 
@@ -268,13 +271,18 @@ def make_plots(df, output_dir):
 
 
 def main():
-    ## YOU KNOW WHAT TO DO. NO NEED TO ADJUST ANYTHING BELOW. ALREADY NICE. MAIN FUNCTION STUFFF.
-    output_dir = Path(CFG.output_dir) / CFG.sweep_parameter
+    output_dir = (
+        Path(CFG.output_dir)
+        / CFG.sweep_parameter
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
 
     results = run_experiment()
 
-    csv_path = output_dir / f"{CFG.sweep_parameter}_experiment.csv"
+    csv_path = (
+        output_dir
+        / f"{CFG.sweep_parameter}_experiment.csv"
+    )
     results.to_csv(csv_path, index=False)
 
     summary = make_plots(results, output_dir)

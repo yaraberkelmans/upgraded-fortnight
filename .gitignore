@@ -32,7 +32,7 @@ EXPERIMENTS/model_arrest_per_time/three_setup_data/
 #   before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-
+*.zip
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
