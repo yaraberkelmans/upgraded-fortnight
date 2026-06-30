@@ -6,7 +6,7 @@ This README explains the file structure and how to run the simulations.
 
 This project was carried out for the Agent-Based-Modelling course at the University of Amsterdam in 2026.
 
-To run all plotting scripts, you need access to the data. The data is available upon request by emailing: ruben.lanjouw14@gmail.com. The ZIP file is not included on GitHub because of its size (530 MB compressed).
+To run all plotting scripts, you need access to the data. The data is available upon request by emailing: ruben.lanjouw14@gmail.com. The ZIP file is not included on GitHub because of its size (530 MB compressed). This is needed for the PLOTS and OFAT.
 
 ## How to run it.
 ### Step 1. Setup Venv
@@ -24,9 +24,9 @@ You're all setup! BTW: in the rubric it says we need to list the packages. Pleas
 
 Folders:
 - ORIGINAL_MODELS: Legacy code for Schelling and Epstein model. Also contains the code to run the servers.
-- RIOT_MODEL: First version of our riot-model. It's not vectorized so a bit slow but with the server you can see some nice simulations!
-- SNELLIUS_FILES: Contains the files needed to run big simulations of our model and the script to run it locally. This folder also contains a README with some more explaination how to use it. 
-- EXPERIMENTS: Here you can find the code for the plots we made in the report which are not related to the data from snellius. The experiments do have seperate folders to make it easier to run as all models are the same but we adjusted some parameters. 
+- RIOT_MODEL: First version of our riot-model. It's not vectorized so a bit slow, but with the server you can see some nice simulations!
+- SNELLIUS_FILES: Contains the files needed to run big simulations of our model and the script to run it locally. This folder also contains a README with some more explanation of how to use it. 
+- EXPERIMENTS: Here you can find the code for the plots we made in the report which are not related to the data from Snellius. The experiments do have seperate folders to make it easier to run as all models are the same but we adjusted some parameters. 
 - DATA_PROCESSING: Contains the scripts used for the Sobol sensitivity analysis and exploratory data analysis presented in the report. We recommend running these scripts from the repository root, with the Snellius output stored in the root-level data folder.
 
 ## Run the solara interface
