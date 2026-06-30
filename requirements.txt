@@ -3,5 +3,7 @@ altair
 networkx
 matplotlib
 numpy
+pandas
+SALib
 solara
 ipython
