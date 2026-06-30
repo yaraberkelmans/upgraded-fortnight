@@ -154,6 +154,10 @@ requirements.txt
 
 ---
 
+## Sensitivity analysis data
+
+---
+
 ## Two implementations
 
 The model ships in two packages with the **same** public API (`RiotModel`,
@@ -209,3 +213,61 @@ logic. As a rough planning figure, a 200-step run at default parameters takes on
 the order of ~15 s, so an embarrassingly-parallel 3000-run sensitivity analysis
 fits within ~1 hour on a 24-core node (more if the sweep pushes `N` or the vision
 radii higher).
+
+---
+
+## Sensitivity analysis data
+
+The `data/` directory is **not tracked in git** — download it separately and place it at the project root before running any analysis scripts.
+
+It contains output from a Sobol sensitivity analysis: **5 random seeds × 3,072 Saltelli-sampled runs = 15,360 runs** total. Each seed folder uses an identical Sobol design (same `sobol_sampling_seed = 2026`), so seed-to-seed variation reflects pure stochasticity.
+
+```
+data/
+  seed_43/          # repeated for seeds 44–47
+    metadata.json           # sweep config: parameter bounds, fixed params, worker count
+    sobol_samples.npy       # (3072, 4)    raw Sobol samples in [0,1]^4
+    run_results.npy         # (3072,)      one row per run — parameters + aggregated outputs
+    run_overview.npy        # (3072,)      entropy at key time-points, warmup duration
+    runs/
+      run_XXXX.npy          # (100,)       per-step time series for the measurement window
+    arrests/
+      arrests_XXXX.npy      # (N_arrests,) microdata — one row per arrest event
+    overview/
+      overview_XXXX.npy     # (1,)         per-run mirror of run_overview (convenience)
+```
+
+### File schemas
+
+**`run_results.npy`** — aggregated outputs, one row per run
+
+| Field | Description |
+|---|---|
+| `sample_id`, `seed`, `valid`, `failure_code` | Run metadata |
+| `similarity_threshold`, `fight_threshold`, `hawk_dove_C`, `police_density` | Sobol input parameters |
+| `warmup_steps`, `runtime_seconds` | Timing |
+| `mean_fighting`, `std_fighting`, `peak_fighting`, `mean_fighting_fraction` | Fighting activity during measurement |
+| `arrests_measurement`, `mean_arrests_per_step` | Arrest totals during measurement |
+| `mean_spatial_entropy_local` | Mean fine-grained spatial entropy during measurement |
+| `mean_similarity`, `mean_happy_fraction` | Schelling satisfaction during measurement |
+| `mean_win_probability`, `mean_arrest_probability` | Perceived probabilities during measurement |
+
+**`run_overview.npy`** — entropy at phase boundaries
+
+| Field | Description |
+|---|---|
+| `run_id`, `valid` | Run metadata |
+| `warmup_steps` | Steps until Schelling convergence |
+| `warmup_entropy` | Spatial entropy at end of warmup |
+| `start_measurement_entropy` | Spatial entropy after 100-step burn-in |
+| `end_measurement_entropy` | Spatial entropy at end of measurement |
+
+**`runs/run_XXXX.npy`** — per-step time series (100 steps, measurement window only)
+
+`step`, `fighting`, `home`, `away`, `police`, `happy`, `unhappy`, `moves`, `arrests_step`, `measurement_total_arrests`, `spatial_entropy_local`, `average_similarity`, `happy_fraction`, `fighting_fraction`, `average_win_probability`, `average_arrest_probability`
+
+**`arrests/arrests_XXXX.npy`** — arrest microdata (variable length, one row per arrest)
+
+`step`, `is_respawn`, `aggressiveness`, `is_home`
+
+> `is_respawn = True` means the arrested fan was itself a replacement spawned by a prior arrest. The true time-to-arrest for respawned fans is not recoverable from saved data (spawn step is not recorded).
